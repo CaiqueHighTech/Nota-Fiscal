@@ -1,1 +1,138 @@
+import java.util.ArrayList;
+import java.util.List;      
+import java.util.Scanner;
 
+/*
+ * Classe RegistroVendedor: Representa um vendedor no sistema de vendas online.
+ * Armazena o nome e o CNPJ do vendedor, com métodos para acesso e exibição.
+ */
+class RegistroVendedor {
+    private String NomeVendedor;     // Atributo privado para o nome do vendedor (ex.: "Loja ABC")
+    private String CNPJ;     // Atributo privado para o CNPJ 
+    
+    // Construtor da classe RegistroVendedor.
+    public RegistroVendedor(String NomeVendedor, String CNPJ) {
+        // Atribui o parâmetro NomeVendedor ao atributo da classe
+        this.NomeVendedor = NomeVendedor;
+        // Atribui o parâmetro CNPJ ao atributo da classe
+        this.CNPJ = CNPJ;
+    }
+    
+    /* Método getter para o atributo NomeVendedor.
+      Permite acesso controlado (somente leitura) ao nome do vendedor.
+      @return O nome do vendedor (String) *\
+      
+    public String getNomeVendedor() {
+        return NomeVendedor;
+    }
+    
+    /*
+     * Método getter para o atributo CNPJ.
+     * Permite acesso controlado (somente leitura) ao CNPJ do vendedor.
+     * @return O CNPJ do vendedor (String)
+     */
+    public String getCNPJ() {
+        return CNPJ;
+    }
+    
+    /*
+     * Sobrescreve o método toString da classe Object.
+     * Retorna uma representação em texto do objeto no formato:
+     * "Vendedor:   <nome>-<CNPJ>" (ex.: "Vendedor:   Loja ABC-12.345.678/0001-99").
+     * Útil para exibição ou depuração.
+     * @return String representando o vendedor
+     */
+    @Override
+    public String toString() {
+        return "Vendedor:   " + NomeVendedor + "-" + CNPJ;
+    }
+}
+
+/*
+ * Classe RegistroComprador: Representa um comprador no sistema de vendas online.
+ * Armazena o nome e o CPF do comprador, com método para exibição.
+ * Nota: Não possui getters, ao contrário de RegistroVendedor, limitando acesso aos atributos.
+ */
+class RegistroComprador {
+    // Atributo privado para o nome do comprador (ex.: "João Silva")
+    // Encapsulado para proteger o acesso direto
+    private String NomeComprador;
+    
+    // Atributo privado para o CPF (ex.: "123.456.789-00")
+    // Armazena o identificador único do comprador no formato de String
+    private String CPF;
+    
+    /*
+     * Construtor da classe RegistroComprador.
+     * Inicializa os atributos NomeComprador e CPF com os valores fornecidos.
+     * @param NomeComprador Nome do comprador (String)
+     * @param CPF Identificador CPF do comprador (String)
+     */
+    public RegistroComprador(String NomeComprador, String CPF) {
+        // Atribui o parâmetro NomeComprador ao atributo da classe
+        // Correção do erro original: "this.NomeComprador;" era inválido
+        this.NomeComprador = NomeComprador;
+        // Atribui o parâmetro CPF ao atributo da classe
+        this.CPF = CPF;
+    }
+    
+    /*
+     * Sobrescreve o método toString da classe Object.
+     * Retorna uma representação em texto do objeto no formato:
+     * "Comprador:  <nome>-<CPF>" (ex.: "Comprador:  João Silva-123.456.789-00").
+     * Útil para exibição ou depuração.
+     * @return String representando o comprador
+     */
+    @Override
+    public String toString() {
+        return "Comprador:  " + NomeComprador + "-" + CPF;
+    }
+}
+
+/*
+ * Classe RegistroProduto: Representa um produto no sistema de vendas online.
+ * Armazena o nome, preço e uma referência ao vendedor associado.
+ * Relaciona produtos a vendedores através do atributo vendedor.
+ */
+class RegistroProduto {
+    // Atributo privado para o nome do produto (ex.: "Smartphone")
+    // Encapsulado para proteger o acesso direto
+    private String nomeProduto;
+    
+    // Atributo privado para o preço do produto (ex.: 999.99)
+    // Usa double para suportar valores decimais
+    private double preco;
+    
+    // Atributo privado para o vendedor associado ao produto
+    // Armazena um objeto RegistroVendedor, criando uma relação entre classes
+    private RegistroVendedor vendedor;
+
+    /*
+     * Construtor da classe RegistroProduto.
+     * Inicializa os atributos nomeProduto, preco e vendedor com os valores fornecidos.
+     * @param nomeProduto Nome do produto (String)
+     * @param preco Preço do produto (double)
+     * @param vendedor Objeto RegistroVendedor associado ao produto
+     */
+    public RegistroProduto(String nomeProduto, double preco, RegistroVendedor vendedor) {
+        // Atribui o parâmetro nomeProduto ao atributo da classe
+        this.nomeProduto = nomeProduto;
+        // Atribui o parâmetro preco ao atributo da classe
+        this.preco = preco;
+        // Atribui o parâmetro vendedor ao atributo da classe
+        this.vendedor = vendedor;
+    }
+
+    /*
+     * Sobrescreve o método toString da classe Object.
+     * Retorna uma representação em texto do objeto no formato:
+     * "Produto: <nome> - R$<preço> - Vendedor: <nome do vendedor>"
+     * Exemplo: "Produto: Smartphone - R$999.99 - Vendedor: Loja ABC"
+     * Usa String.format para formatar o preço com duas casas decimais.
+     * @return String representando o produto
+     */
+    @Override
+    public String toString() {
+        return "Produto: " + nomeProduto + " - R$" + String.format("%.2f", preco) + " - Vendedor: " + vendedor.getNomeVendedor();
+    }
+}
