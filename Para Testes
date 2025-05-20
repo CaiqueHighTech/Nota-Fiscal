@@ -10,7 +10,7 @@
  * - Possui funcionalidades de consulta e listagem detalhada.
  * - Inclui validações fiscais e cálculo de impostos.
  * 
- * (20/05/2025)-(IDE jdoodle.com)-(github:...)
+ * (20/05/2025)-(IDE jdoodle.com)-(github:https://github.com/CaiqueHighTech/Nota-Fiscal/blob/main/Para%20Testes)
 *****************************************************************************************************************/
 
 // Declaração de Bibliotecas
@@ -194,9 +194,9 @@ public class SistemaNotaFiscal {
             String documento = scanner.nextLine().trim();
 
             if (padraoCPF.matcher(documento).matches()) {
-                return "CPF válido: " + documento;
+                return ": " + documento;
             } else if (padraoCNPJ.matcher(documento).matches()) {
-                return "CNPJ válido: " + documento;
+                return ": " + documento;
             } else {
                 System.out.println("Erro: O documento deve seguir um dos formatos esperados!");
                 System.out.println("CPF: XXX.XXX.XXX-XX      (Ex: 123.456.789-00)");
@@ -266,7 +266,7 @@ public class SistemaNotaFiscal {
         // Seleção do vendedor
         System.out.println("\nVendedores disponíveis:");
         for (int i = 0; i < vendedores.size(); i++) {
-            System.out.println((i + 1) + ". " + vendedores.get(i).getNomeVendedor() + " - " + vendedores.get(i).getCNPJ());
+            System.out.println((i + 1) + ". " + vendedores.get(i).getNomeVendedor() + " - " + vendedores.get(i).getCC());
         }
         System.out.print("Selecione o número do vendedor: ");
         int indiceVendedor;
@@ -596,125 +596,89 @@ public class SistemaNotaFiscal {
     }
 }
 
+
+
 //*************************************************************************************************************************
 
-/**
- * Classe RegistroVendedor: Representa um vendedor no sistema de vendas online.
- * Armazena o nome e o CNPJ do vendedor, com métodos para acesso e exibição.
- */
+// Classe que representa um vendedor no sistema de vendas online
 class RegistroVendedor {
-    private String nomeVendedor;     // Atributo privado para o nome do vendedor (ex.: "Loja ABC")
-    private String cnpj;             // Atributo privado para o CNPJ 
+    private String nomeVendedor; // Atributo privado para o nome do vendedor (ex.: "Loja ABC")
+    private String cc;         // Atributo privado para o CPF/CNPJ
     
-    /**
-     * Construtor da classe RegistroVendedor.
-     * @param nomeVendedor Nome do vendedor
-     * @param cnpj CNPJ do vendedor
-     */
-    public RegistroVendedor(String nomeVendedor, String cnpj) {
+    // Construtor da classe RegistroVendedor
+    public RegistroVendedor(String nomeVendedor, String cc) {
         this.nomeVendedor = nomeVendedor;
-        this.cnpj = cnpj;
+        this.cc = cc;
     }
     
-    /**
-     * Método getter para o atributo nomeVendedor.
-     * @return O nome do vendedor (String)
-     */
+    // Método getter para o atributo nomeVendeador (nome do vendedor)
     public String getNomeVendedor() {
         return nomeVendedor;
     }
     
-    /**
-     * Método getter para o atributo CNPJ.
-     * @return O CNPJ do vendedor (String)
-     */
-    public String getCNPJ() {
-        return cnpj;
+    // Método getter para o atributo CC (CC do vendedor)
+    public String getCC() {
+        return cc;
     }
     
-    /**
-     * Retorna os detalhes completos do vendedor em formato de texto.
-     * @return String com todos os detalhes do vendedor
-     */
+    // Retorna os detalhes completos do vendedor em formato de texto
     public String getDetalhesCompletos() {
         StringBuilder sb = new StringBuilder();
         sb.append("|----- DETALHES DO VENDEDOR -----|\n");
         sb.append("Nome: ").append(nomeVendedor).append("\n");
-        sb.append("CNPJ: ").append(cnpj);
+        sb.append("CC: ").append(cc);
         return sb.toString();
     }
     
-    /**
-     * Sobrescreve o método toString da classe Object.
-     * @return String representando o vendedor
-     */
+    // Sobrescreve o método toString da classe Object (String representando o vendedor)
     @Override
     public String toString() {
-        return "Vendedor: " + nomeVendedor + " - CNPJ: " + cnpj;
+        return "Vendedor: " + nomeVendedor + " - CNPJ: " + cc;
     }
 }
 
-/**
- * Classe RegistroComprador: Representa um comprador no sistema de vendas online.
- * Armazena o nome e o CPF do comprador, com método para exibição.
- */
+// Classe que representa um comprador no sistema de vendas online
 class RegistroComprador {
-    private String nomeComprador;    // Atributo privado para o nome do comprador
-    private String cpf;              // Atributo privado para o CPF
+    private String nomeComprador; // Atributo privado para o nome do comprador
+    private String cc;           // Atributo privado para o CPF/CNPJ
     
-    /**
-     * Construtor da classe RegistroComprador.
-     * @param nomeComprador Nome do comprador
-     * @param cpf CPF do comprador
-     */
-    public RegistroComprador(String nomeComprador, String cpf) {
+    // Construtor da classe RegistroComprador
+    public RegistroComprador(String nomeComprador, String cc) {
         this.nomeComprador = nomeComprador;
-        this.cpf = cpf;
+        this.cc = cc;
     }
     
-    /**
-     * Método getter para o atributo nomeComprador.
-     * @return O nome do comprador (String)
-     */
+    // Método getter para o atributo nomeComprador (nome do comprador)
     public String getNomeComprador() {
         return nomeComprador;
     }
     
-    /**
-     * Método getter para o atributo CPF.
-     * @return O CPF do comprador (String)
-     */
-    public String getCPF() {
-        return cpf;
+    // Método getter para o atributo CC (CC do comprador)
+    public String getCC() {
+        return cc;
     }
     
-    /**
-     * Retorna os detalhes completos do comprador em formato de texto.
-     * @return String com todos os detalhes do comprador
-     */
+    // Retorna os detalhes completos do comprador em formato de texto
     public String getDetalhesCompletos() {
         StringBuilder sb = new StringBuilder();
         sb.append("|---- DETALHES DO COMPRADOR -----|\n");
         sb.append("Nome: ").append(nomeComprador).append("\n");
-        sb.append("CPF: ").append(cpf);
+        sb.append("CC: ").append(cc);
         return sb.toString();
     }
     
-    /**
-     * Sobrescreve o método toString da classe Object.
-     * @return String representando o comprador
-     */
+    // Sobrescreve o método toString da classe Object (String representando o comprador)
     @Override
     public String toString() {
-        return "Comprador: " + nomeComprador + " - CPF: " + cpf;
+        return "Comprador: " + nomeComprador + " - CPF: " + cc;
     }
 }
 
-/**
- * Classe RegistroProduto: Representa um produto no sistema de vendas online.
- * Armazena informações detalhadas do produto, incluindo dados fiscais e impostos.
- */
+//*************************************************************************************************************************
+
+// Classe que representa um produto no sistema de vendas online (armazenamento de infoinformações)
 class RegistroProduto {
+    
     // Atributos básicos
     private String nomeProduto;
     private double preco;
@@ -734,160 +698,103 @@ class RegistroProduto {
     // Impostos aplicáveis
     private Map<String, Double> impostos;
 
-    /**
-     * Construtor da classe RegistroProduto com todos os atributos.
-     * @param nomeProduto Nome do produto
-     * @param preco Preço unitário do produto
-     * @param vendedor Vendedor associado ao produto
-     * @param descricaoCompleta Descrição detalhada do produto
-     * @param codigoNCM Código NCM (Nomenclatura Comum do Mercosul)
-     * @param quantidade Quantidade do produto
-     * @param unidade Peso (kg, g, t, etc)
-     * @param codigoCFOP Código CFOP (Código Fiscal de Operações e Prestações)
-     * @param valorSemImpostos Valor da operação sem impostos
-     * @param valorImpostos Valor dos impostos
-     * @param valorTotal Valor total da operação com impostos
-     * @param informacoesComplementares Informações adicionais sobre o produto
-     * @param impostos Mapa com os impostos aplicáveis e suas alíquotas
-     */
+    // Classe com todos os atributos de um produto
     public RegistroProduto(
-            String nomeProduto, 
-            double preco, 
-            RegistroVendedor vendedor,
-            String descricaoCompleta,
-            String codigoNCM,
-            double quantidade,
-            String unidade,
-            String codigoCFOP,
-            double valorSemImpostos,
-            double valorImpostos,
-            double valorTotal,
-            String informacoesComplementares,
-            Map<String, Double> impostos) {
+            String nomeProduto,               // Nome do produto
+            double preco,                     // Preço unitário do produto
+            RegistroVendedor vendedor,        // Vendedor associado ao produto
+            String descricaoCompleta,         // Descrição detalhada do produto
+            String codigoNCM,                 // Código NCM (Nomenclatura Comum do Mercosul)
+            double quantidade,                // Quantidade do produto
+            String unidade,                   // Peso (kg, g, t, etc)
+            String codigoCFOP,                // Código CFOP (Código Fiscal de Operações e Prestações)
+            double valorSemImpostos,          // Valor da operação sem impostos
+            double valorImpostos,             // Valor dos impostos
+            double valorTotal,                // Valor total da operação com impostos
+            String informacoesComplementares, // Informações adicionais sobre o produto
+            Map<String, Double> impostos) {   // Mapa com os impostos aplicáveis e suas alíquotas
         
-        this.nomeProduto = nomeProduto;
-        this.preco = preco;
-        this.vendedor = vendedor;
-        this.descricaoCompleta = descricaoCompleta;
-        this.codigoNCM = codigoNCM;
-        this.quantidade = quantidade;
-        this.unidade = unidade;
-        this.codigoCFOP = codigoCFOP;
-        this.valorSemImpostos = valorSemImpostos;
-        this.valorImpostos = valorImpostos;
-        this.valorTotal = valorTotal;
-        this.informacoesComplementares = informacoesComplementares;
-        this.impostos = impostos;
+                this.nomeProduto = nomeProduto;
+                this.preco = preco;
+                this.vendedor = vendedor;
+                this.descricaoCompleta = descricaoCompleta;
+                this.codigoNCM = codigoNCM;
+                this.quantidade = quantidade;
+                this.unidade = unidade;
+                this.codigoCFOP = codigoCFOP;
+                this.valorSemImpostos = valorSemImpostos;
+                this.valorImpostos = valorImpostos;
+                this.valorTotal = valorTotal;
+                this.informacoesComplementares = informacoesComplementares;
+                this.impostos = impostos;
     }
 
-    /**
-     * Método getter para o atributo nomeProduto.
-     * @return O nome do produto
-     */
+    // Método getter para o atributo nomeProduto
     public String getNomeProduto() {
         return nomeProduto;
     }
     
-    /**
-     * Método getter para o atributo preco.
-     * @return O preço unitário do produto
-     */
+    // Método getter para o atributo preco
     public double getPreco() {
         return preco;
     }
     
-    /**
-     * Método getter para o atributo vendedor.
-     * @return O vendedor associado ao produto
-     */
+    // Método getter para o atributo vendedor (vendedor associado ao produto)
     public RegistroVendedor getVendedor() {
         return vendedor;
     }
     
-    /**
-     * Método getter para o atributo descricaoCompleta.
-     * @return A descrição completa do produto
-     */
+    // Método getter para o atributo descricaoCompleta
     public String getDescricaoCompleta() {
         return descricaoCompleta;
     }
     
-    /**
-     * Método getter para o atributo codigoNCM.
-     * @return O código NCM do produto
-     */
+    // Método getter para o atributo codigoNCM
     public String getCodigoNCM() {
         return codigoNCM;
     }
     
-    /**
-     * Método getter para o atributo quantidade.
-     * @return A quantidade do produto
-     */
+    // Método getter para o atributo quantidade
     public double getQuantidade() {
         return quantidade;
     }
     
-    /**
-     * Método getter para o atributo unidade.
-     * @return O peso do produto
-     */
+    // Método getter para o atributo unidade (peso do produto)
     public String getUnidade() {
         return unidade;
     }
     
-    /**
-     * Método getter para o atributo codigoCFOP.
-     * @return O código CFOP do produto
-     */
+    // Método getter para o atributo codigoCFOP
     public String getCodigoCFOP() {
         return codigoCFOP;
     }
     
-    /**
-     * Método getter para o atributo valorSemImpostos.
-     * @return O valor da operação sem impostos
-     */
+    // Método getter para o atributo valorSemImpostos
     public double getValorSemImpostos() {
         return valorSemImpostos;
     }
     
-    /**
-     * Método getter para o atributo valorImpostos.
-     * @return O valor dos impostos
-     */
+    // Método getter para o atributo valorImpostos
     public double getValorImpostos() {
         return valorImpostos;
     }
     
-    /**
-     * Método getter para o atributo valorTotal.
-     * @return O valor total da operação com impostos
-     */
+    // Método getter para o atributo valorTotal
     public double getValorTotal() {
         return valorTotal;
     }
     
-    /**
-     * Método getter para o atributo informacoesComplementares.
-     * @return As informações complementares do produto
-     */
+    // Método getter para o atributo informacoesComplementares
     public String getInformacoesComplementares() {
         return informacoesComplementares;
     }
     
-    /**
-     * Método getter para o atributo impostos.
-     * @return Mapa com os impostos aplicáveis e suas alíquotas
-     */
+    // Método getter para o atributo impostos (com os impostos aplicáveis e suas alíquotas)
     public Map<String, Double> getImpostos() {
         return impostos;
     }
     
-    /**
-     * Retorna os detalhes completos do produto em formato de texto.
-     * @return String com todos os detalhes do produto
-     */
+    // Retorna os detalhes completos do produto em formato de texto
     public String getDetalhesCompletos() {
         StringBuilder sb = new StringBuilder();
         sb.append("|----- DETALHES DO PRODUTO ------|\n");
@@ -898,7 +805,7 @@ class RegistroProduto {
         sb.append("Valor sem impostos: R$ ").append(String.format("%.10f", valorSemImpostos)).append("\n");
         sb.append("Código NCM: ").append(codigoNCM).append("\n");
         sb.append("Código CFOP: ").append(codigoCFOP).append("\n");
-        sb.append("Vendedor: ").append(vendedor.getNomeVendedor()).append(" (CNPJ: ").append(vendedor.getCNPJ()).append(")\n");
+        sb.append("Vendedor: ").append(vendedor.getNomeVendedor()).append(" (CNPJ: ").append(vendedor.getCC()).append(")\n");
         
         // Detalhes dos impostos
         sb.append("\nImpostos aplicáveis:\n");
@@ -913,16 +820,12 @@ class RegistroProduto {
             }
             sb.append("Total de impostos: R$ ").append(String.format("%.10f", valorImpostos)).append("\n");
         }
-        
         sb.append("\nValor total com impostos: R$ ").append(String.format("%.10f", valorTotal)).append("\n");
         sb.append("Informações complementares: ").append(informacoesComplementares);
         return sb.toString();
     }
-
-    /**
-     * Sobrescreve o método toString da classe Object.
-     * @return String representando o produto
-     */
+    
+    // Sobrescreve o método toString da classe Object (String representando o produto)
     @Override
     public String toString() {
         return "Produto: " + nomeProduto + 
