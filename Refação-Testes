@@ -1,1 +1,956 @@
+/**************************************************************************************
+ * AV3 - Estruturas de Dados
+ * Sistema de Nota Fiscal + Implementação de Recursos Avançados
+ * 
+ * Instrutor(a) : Prof. Sheila Tirony
+ * Integrantes  : Andrew Soares Menezes dos Santos; Bernardo de Mello Cyrne Garmatz;
+ *                Caique da Conceição Medeiros; Caique Dantas de frança;
+ *                Inácio Araújo Dias de Freitas; Rodrigo Costa Brasil.
+ * 
+ * - Este sistema permite o registro de vendedores, compradores e produtos.
+ * - Possui funcionalidades de consulta e listagem detalhada.
+ * - Inclui validações fiscais e cálculo de impostos.
+ * 
+ * (20/05/2025)-(IDE jdoodle.com)-(github:...)
+ **************************************************************************************/
 
+// Declaração de Bibliotecas
+import java.util.Scanner;           // Entrada de dados
+import java.util.ArrayList;         // Interface para armazenar elementos dinâmicos
+import java.util.List;              // Interface para manipular métodos/dados
+import java.util.Map;               // Interface para definir chave-valor
+import java.util.HashMap;           // Implemento para armazenar chave-valor
+import java.util.Optional;          // Classe para tratamento de ausência de valor (null)
+import java.util.regex.Pattern;     // Permitir operações avançadas de manipulação e busca de texto
+import java.util.stream.Collectors; // Permitir coletar e processar elementos de fluxos
+
+// Método Principal (Main)
+public class SistemaNotaFiscal {
+    
+    // Listas para armazenar os registros
+    private static final List<RegistroVendedor>  vendedores  = new ArrayList<>();
+    private static final List<RegistroComprador> compradores = new ArrayList<>();
+    private static final List<RegistroProduto>   produtos    = new ArrayList<>();
+    
+    // Mapa de alíquotas de ICMS por estado
+    private static final Map<String, Double> ALIQUOTAS_ICMS = new HashMap<>();
+        static {
+        // Região Norte
+        ALIQUOTAS_ICMS.put("AC", 19.0); // Acre
+        ALIQUOTAS_ICMS.put("AP", 18.0); // Amapá
+        ALIQUOTAS_ICMS.put("AM", 18.0); // Amazonas
+        ALIQUOTAS_ICMS.put("PA", 19.0); // Pará
+        ALIQUOTAS_ICMS.put("RO", 19.5); // Rondônia
+        ALIQUOTAS_ICMS.put("RR", 20.0); // Roraima
+        ALIQUOTAS_ICMS.put("TO", 18.0); // Tocantins
+        // Região Nordeste
+        ALIQUOTAS_ICMS.put("AL", 18.0); // Alagoas
+        ALIQUOTAS_ICMS.put("BA", 19.0); // Bahia
+        ALIQUOTAS_ICMS.put("CE", 18.0); // Ceará
+        ALIQUOTAS_ICMS.put("MA", 23.0); // Maranhão
+        ALIQUOTAS_ICMS.put("PB", 18.0); // Paraíba
+        ALIQUOTAS_ICMS.put("PE", 18.0); // Pernambuco
+        ALIQUOTAS_ICMS.put("PI", 22.5); // Piauí
+        ALIQUOTAS_ICMS.put("RN", 20.0); // Rio Grande do Norte
+        ALIQUOTAS_ICMS.put("SE", 20.0); // Sergipe
+        // Região Centro-Oeste
+        ALIQUOTAS_ICMS.put("DF", 18.0); // Distrito Federal
+        ALIQUOTAS_ICMS.put("GO", 17.0); // Goiás
+        ALIQUOTAS_ICMS.put("MT", 17.0); // Mato Grosso
+        ALIQUOTAS_ICMS.put("MS", 17.0); // Mato Grosso do Sul
+        // Região Sudeste
+        ALIQUOTAS_ICMS.put("ES", 17.0); // Espírito Santo
+        ALIQUOTAS_ICMS.put("MG", 18.0); // Minas Gerais
+        ALIQUOTAS_ICMS.put("RJ", 20.0); // Rio de Janeiro
+        ALIQUOTAS_ICMS.put("SP", 18.0); // São Paulo
+        // Região Sul
+        ALIQUOTAS_ICMS.put("PR", 19.0); // Paraná
+        ALIQUOTAS_ICMS.put("RS", 17.0); // Rio Grande do Sul
+        ALIQUOTAS_ICMS.put("SC", 17.0); // Santa Catarina
+    }
+    
+    // Alíquotas de impostos federais
+    private static final double ALIQUOTA_IPI        = 10.0; // Varia conforme o produto, usando média
+    private static final double ALIQUOTA_PIS        = 0.65; // Regime cumulativo
+    private static final double ALIQUOTA_COFINS     = 3.0 ; // Regime cumulativo
+    private static final double ALIQUOTA_IRPJ       = 15.0; // Alíquota base
+    private static final double ALIQUOTA_CSLL       =  9.0; // Alíquota padrão
+    private static final double ALIQUOTA_IMPORTACAO = 20.0; // Varia conforme o produto, usando média
+    private static final double ALIQUOTA_ITBI       =  3.0; // Varia conforme o município, usando média
+    
+    // Método Principal (Funções)
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        boolean executando = true;
+        
+        //System.out.println("|==== SISTEMA DE NOTA FISCAL ====|\n");  // Usar no Front-end
+        while (executando) {
+            exibirMenu();
+            int opcao = lerOpcao(scanner);
+            
+            switch (opcao) {
+                case 1:
+                    registrarVendedor(scanner);
+                    break;
+                case 2:
+                    registrarComprador(scanner);
+                    break;
+                case 3:
+                    registrarProduto(scanner);
+                    break;
+                case 4:
+                    consultarPorNome(scanner);
+                    break;
+                case 5:
+                    listarTodos();
+                    break;
+                case 6:
+                    executando = false;
+                    System.out.println("Sistema encerrado. Obrigado!");
+                    break;
+                default:
+                    System.out.println("Opção inválida! Tente novamente.");
+            }
+        }
+        scanner.close();
+    }
+    
+    // Metódo para imprimir o Menu Inicial
+    private static void exibirMenu() {
+        System.out.println("\n|-------- MENU PRINCIPAL --------|");
+        System.out.println("\n| 1 - Registrar Vendedor         |");
+        System.out.println("| 2 - Registrar Comprador        |");
+        System.out.println("| 3 - Registrar Produto          |");
+        System.out.println("| 4 - Consultar por Nome         |");
+        System.out.println("| 5 - Listar Todos os Registros  |");
+        System.out.println("| 6 - Sair                       |\n");
+        System.out.print("Escolha uma opção: ");
+    }
+    
+    // Metódo para escanear a opção do usuário
+    private static int lerOpcao(Scanner scanner) {
+        try {
+            return Integer.parseInt(scanner.nextLine().trim());
+        } catch (NumberFormatException e) {
+            return -1; // Retorna opção inválida (opção não declarada)
+        }
+    }
+    
+    // Metódo para Registrar: Vendedor
+    private static void registrarVendedor(Scanner scanner) {
+        System.out.println("\n|----- REGISTRO DE VENDEDOR -----|");
+        System.out.print("Nome do Vendedor: ");
+        String nome = scanner.nextLine().trim();
+        
+        // Validação do nome (enter)
+        if (nome.isEmpty()) {
+            System.out.println("Erro: Nome do vendedor é obrigatório!");
+            return;
+        }
+        
+        // Validação do CPF/CNPJ no formato oficial
+        String codigo = lerCV(scanner);
+        if (codigo == null) {
+            return;
+        }
+        RegistroVendedor vendedor = new RegistroVendedor(nome, codigo);
+        vendedores.add(vendedor);
+        System.out.println("Vendedor registrado com sucesso!");
+    }
+    
+    // Metódo para Validar o CPF/CNPJ
+    private static String lerCV(Scanner scanner) {
+        Pattern padraoCPF = Pattern.compile("^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$");
+        Pattern padraoCNPJ = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$");
+
+        while (true) {
+            System.out.print("Digite o CPF ou CNPJ: ");
+            String documento = scanner.nextLine().trim();
+
+            if (padraoCPF.matcher(documento).matches()) {
+                return "CPF válido: " + documento;
+            } else if (padraoCNPJ.matcher(documento).matches()) {
+                return "CNPJ válido: " + documento;
+            } else {
+                System.out.println("Erro: O documento deve seguir um dos formatos esperados!");
+                System.out.println("CPF: XXX.XXX.XXX-XX      (Ex: 123.456.789-00)");
+                System.out.println("CNPJ: XX.XXX.XXX/XXXX-XX (Ex: 12.345.678/0001-23)");
+                System.out.print("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+            }
+        }
+    }
+    
+    // Metódo para Registrar: Comprador
+    private static void registrarComprador(Scanner scanner) {
+        System.out.println("\n|---- REGISTRO DE COMPRADOR -----|");
+        System.out.print("Nome do Comprador: ");
+        String nome = scanner.nextLine().trim();
+        
+        // Validação do nome (enter)
+        if (nome.isEmpty()) {
+            System.out.println("Erro: Nome do comprador é obrigatório!");
+            return;
+        }
+        
+        // Validação do CPF/CNPJ no formato oficial
+        String codigo = lerCC(scanner);
+        if (codigo == null) {
+            return;
+        }
+        
+        RegistroComprador comprador = new RegistroComprador(nome, codigo);
+        compradores.add(comprador);
+        System.out.println("Comprador registrado com sucesso!");
+    }
+    
+    // Metódo para Validar o CPF/CNPJ
+    private static String lerCC(Scanner scanner) {
+        Pattern padraoCPF = Pattern.compile("^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$");
+        Pattern padraoCNPJ = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$");
+
+        while (true) {
+            System.out.print("Digite o CPF ou CNPJ: ");
+            String documento = scanner.nextLine().trim();
+
+            if (padraoCPF.matcher(documento).matches()) {
+                return "CPF válido: " + documento;
+            } else if (padraoCNPJ.matcher(documento).matches()) {
+                return "CNPJ válido: " + documento;
+            } else {
+                System.out.println("Erro: O documento deve seguir um dos formatos esperados!");
+                System.out.println("CPF: XXX.XXX.XXX-XX      (Ex: 123.456.789-00)");
+                System.out.println("CNPJ: XX.XXX.XXX/XXXX-XX (Ex: 12.345.678/0001-23)");
+                System.out.print("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+            }
+        }
+    }
+    
+    // Metódo para Registrar: Produto
+    private static void registrarProduto(Scanner scanner) {
+        System.out.println("\n|----- REGISTRO DE PRODUTO ------|");
+        
+        // Verificar se existem vendedores cadastrados
+        if (vendedores.isEmpty()) {
+            System.out.println("Erro: É necessário cadastrar um vendedor antes de registrar produtos!");
+            return;
+        }
+        System.out.print("Nome do Produto: ");
+        String nome = scanner.nextLine().trim();
+        
+        // Validação do nome (enter)
+        if (nome.isEmpty()) {
+            System.out.println("Erro: Nome do produto é obrigatório!");
+            return;
+        }
+        
+        // Coleta de dados com validação
+        double preco = lerValorNumericoPositivo(scanner, "Preço unitário (R$): ");
+        if (preco < 0) return;
+        
+        // Coleta de dados fiscais e detalhados
+        System.out.print("Descrição completa do produto: ");
+        String descricao = scanner.nextLine().trim();
+        
+        // Validação do NCM (formato 0000.00.00)
+        String ncm = lerNCM(scanner);
+        if (ncm == null) return;
+        
+        // Validação interativa da quantidade
+        double quantidade = lerQuantidade(scanner);
+        if (quantidade <= 0) return;
+        
+        // Validação interativa do peso
+        String unidade = lerPeso(scanner);
+        if (unidade == null) return;
+        
+        // Validação do CFOP (formato 0.000)
+        String cfop = lerCFOP(scanner);
+        if (cfop == null) return;
+        
+        // Configuração de impostos
+        Map<String, Double> impostos = coletarImpostos(scanner);
+        if (impostos == null) return;
+        
+        // Cálculo do valor total com impostos
+        double valorSemImpostos = preco * quantidade;
+        double valorImpostos = calcularValorImpostos(valorSemImpostos, impostos);
+        double valorTotal = valorSemImpostos + valorImpostos;
+        System.out.print("Informações complementares: ");
+        String infoComplementares = scanner.nextLine().trim();
+        
+        // Seleção do vendedor
+        System.out.println("\nVendedores disponíveis:");
+        for (int i = 0; i < vendedores.size(); i++) {
+            System.out.println((i + 1) + ". " + vendedores.get(i).getNomeVendedor() + " - " + vendedores.get(i).getCNPJ());
+        }
+        System.out.print("Selecione o número do vendedor: ");
+        int indiceVendedor;
+        try {
+            indiceVendedor = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            if (indiceVendedor < 0 || indiceVendedor >= vendedores.size()) {
+                System.out.println("Erro: Índice de vendedor inválido!");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Erro: Entrada inválida para índice de vendedor!");
+            return;
+        }
+        RegistroVendedor vendedor = vendedores.get(indiceVendedor);
+        
+        // Criação do produto com todos os dados coletados
+        RegistroProduto produto = new RegistroProduto(
+            nome, preco, vendedor, descricao, ncm, 
+            quantidade, unidade, cfop, valorSemImpostos, valorImpostos, valorTotal, 
+            infoComplementares, impostos
+        );
+        produtos.add(produto);
+        System.out.println("Produto registrado com sucesso!");
+    }
+    
+    // Metódo para Validar: Quantidade > 0
+    private static double lerQuantidade(Scanner scanner) {
+        while (true) {
+            System.out.print("Quantidade: ");
+            try {
+                double quantidade = Double.parseDouble(scanner.nextLine().trim().replace(",", "."));
+                
+                if (quantidade <= 0) {
+                    System.out.println("Erro: A quantidade deve ser maior que zero!");
+                    System.out.print("Deseja tentar novamente? (S/N): ");
+                    String resposta = scanner.nextLine().trim().toUpperCase();
+                    if (!resposta.equals("S")) {
+                        return -1;
+                    }
+                } else {
+                    return quantidade;
+                }
+            } catch (NumberFormatException e) {
+                System.out.println("Erro: Valor numérico inválido!");
+                System.out.print("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return -1;
+                }
+            }
+        }
+    }
+    
+    // Metódo para Validar: Peso > 0
+    private static String lerPeso(Scanner scanner) {
+        while (true) {
+            System.out.print("Peso (kg, g, t, etc): ");
+            String peso = scanner.nextLine().trim();
+            
+            if (peso.isEmpty()) {
+                System.out.println("Erro: O peso é obrigatório!");
+                System.out.print("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+            } else {
+                // Verifica se o primeiro caractere é um dígito ou ponto decimal para garantir que o peso começa com um valor numérico
+                if (!Character.isDigit(peso.charAt(0)) && peso.charAt(0) != '.') {
+                    System.out.println("Erro: O peso deve começar com um valor numérico!");
+                    System.out.print("Deseja tentar novamente? (S/N): ");
+                    String resposta = scanner.nextLine().trim().toUpperCase();
+                    if (!resposta.equals("S")) {
+                        return null;
+                    }
+                } else {
+                    // Tenta extrair a parte numérica para validar se é maior que zero
+                    try {
+                        String[] partes = peso.split(" ");
+                        double valorNumerico = Double.parseDouble(partes[0].replace(",", "."));
+                        
+                        if (valorNumerico <= 0) {
+                            System.out.println("Erro: O valor do peso deve ser maior que zero!");
+                            System.out.print("Deseja tentar novamente? (S/N): ");
+                            String resposta = scanner.nextLine().trim().toUpperCase();
+                            if (!resposta.equals("S")) {
+                                return null;
+                            }
+                        } else {
+                            return peso;
+                        }
+                    } catch (Exception e) {
+                        // Se não conseguir extrair um valor numérico, aceita o valor como esta pois pode ser um formato complexo que inclui a unidade
+                        return peso;
+                    }
+                }
+            }
+        }
+    }
+    
+    // Metódo para Validar: NCM
+    private static String lerNCM(Scanner scanner) {
+        Pattern padrao = Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}$");
+        
+        while (true) {
+            System.out.print("Código NCM (formato: 1234.65.78): ");
+            String ncm = scanner.nextLine().trim();
+            
+            if (padrao.matcher(ncm).matches()) {
+                return ncm;
+            } else {
+                System.out.println("Erro: O código NCM deve seguir o formato XXXX.XX.XX!");
+                System.out.println("Exemplo: 1234.65.78");
+                System.out.println("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+            }
+        }
+    }
+    
+    // Metódo para Validar: CFOP
+    private static String lerCFOP(Scanner scanner) {
+        Pattern padrao = Pattern.compile("^\\d\\.\\d{3}$");
+        
+        while (true) {
+            System.out.print("Código CFOP (formato: 1.234): ");
+            String cfop = scanner.nextLine().trim();
+            
+            if (padrao.matcher(cfop).matches()) {
+                return cfop;
+            } else {
+                System.out.println("Erro: O código CFOP deve seguir o formato X.XXX!");
+                System.out.println("Exemplo: 1.234");
+                System.out.println("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+            }
+        }
+    }
+    
+    // Metódo para Validar: Valor
+    private static double lerValorNumericoPositivo(Scanner scanner, String mensagem) {
+        System.out.print(mensagem);
+        try {
+            double valor = Double.parseDouble(scanner.nextLine().trim().replace(",", "."));
+            if (valor < 0) {
+                System.out.println("Erro: O valor não pode ser negativo!");
+                return -1;
+            }
+            return valor;
+        } catch (NumberFormatException e) {
+            System.out.println("Erro: Valor numérico inválido!");
+            return -1;
+        }
+    }
+    
+    // Metódo para coletar informaçõessobre os tipos de impostos 
+    private static Map<String, Double> coletarImpostos(Scanner scanner) {
+        Map<String, Double> impostos = new HashMap<>();
+        
+        // IPI
+        if (confirmarImposto(scanner, "IPI")) {
+            impostos.put("IPI", ALIQUOTA_IPI);
+        }
+        
+        // ICMS (estadual)
+        if (confirmarImposto(scanner, "ICMS")) {
+            System.out.print("Digite a sigla do estado (UF) para cálculo do ICMS: ");
+            String uf = scanner.nextLine().trim().toUpperCase();
+            
+            if (ALIQUOTAS_ICMS.containsKey(uf)) {
+                impostos.put("ICMS", ALIQUOTAS_ICMS.get(uf));
+                System.out.println("Alíquota de ICMS para " + uf + " em 2025: " + ALIQUOTAS_ICMS.get(uf) + "%");
+            } else {
+                System.out.println("Erro: UF inválida ou não encontrada!");
+                return null;
+            }
+        }
+        
+        // PIS/PASEP
+        if (confirmarImposto(scanner, "PIS/PASEP")) {
+            impostos.put("PIS", ALIQUOTA_PIS);
+        }
+        
+        // COFINS
+        if (confirmarImposto(scanner, "COFINS")) {
+            impostos.put("COFINS", ALIQUOTA_COFINS);
+        }
+        
+        // IRPJ
+        if (confirmarImposto(scanner, "IRPJ")) {
+            impostos.put("IRPJ", ALIQUOTA_IRPJ);
+        }
+        
+        // CSLL
+        if (confirmarImposto(scanner, "CSLL")) {
+            impostos.put("CSLL", ALIQUOTA_CSLL);
+        }
+        
+        // Imposto de Importação
+        if (confirmarImposto(scanner, "Imposto de Importação")) {
+            impostos.put("II", ALIQUOTA_IMPORTACAO);
+        }
+        
+        // ITBI
+        if (confirmarImposto(scanner, "ITBI")) {
+            impostos.put("ITBI", ALIQUOTA_ITBI);
+        }
+        return impostos;
+    }
+    
+    // Metódo para confirmar se um imposto é aplicável ao produto ou não
+    private static boolean confirmarImposto(Scanner scanner, String nomeImposto) {
+        System.out.print("O produto está sujeito a " + nomeImposto + "? (S/N): ");
+        String resposta = scanner.nextLine().trim().toUpperCase();
+        return resposta.equals("S");
+    }
+    
+    // Metódo para calcular o valor total dos impostos
+    private static double calcularValorImpostos(double valorBase, Map<String, Double> impostos) {
+        double valorImpostos = 0.0;
+        
+        for (Map.Entry<String, Double> imposto : impostos.entrySet()) {
+            valorImpostos += valorBase * (imposto.getValue() / 100.0);
+        }
+        return valorImpostos;
+    }
+    
+    // Metódo para Consultar Por Nome
+    private static void consultarPorNome(Scanner scanner) {
+        System.out.println("\n|------ CONSULTA POR NOME -------|");
+        System.out.println("O que deseja consultar? (vendedor/comprador/produto)");
+        String tipo = scanner.nextLine().trim().toLowerCase();
+        System.out.print("Digite o nome para busca: ");
+        String termoBusca = scanner.nextLine().trim().toLowerCase();
+        boolean encontrado = false;
+        
+        switch (tipo) {
+            case "vendedor":
+                encontrado = buscarVendedor(termoBusca);
+                break;
+            case "comprador":
+                encontrado = buscarComprador(termoBusca);
+                break;
+            case "produto":
+                encontrado = buscarProduto(termoBusca);
+                break;
+            default:
+                System.out.println("Tipo de consulta inválido. Use vendedor, comprador ou produto.");
+        }
+        if (!encontrado) {
+            System.out.println("Nenhum registro encontrado para: " + termoBusca);
+        }
+    }
+    
+    // Metódo de Buscar: Vendedor
+    private static boolean buscarVendedor(String termo) {
+        List<RegistroVendedor> resultados = vendedores.stream()
+            .filter(v -> v.getNomeVendedor().toLowerCase().contains(termo))
+            .collect(Collectors.toList());
+        
+        if (resultados.isEmpty()) {
+            return false;
+        }
+        System.out.println("\n|---- VENDEDORES ENCONTRADOS ----|");
+        resultados.forEach(v -> System.out.println(v.getDetalhesCompletos()));
+        return true;
+    }
+    
+    // Metódo de Buscar: Comprador
+    private static boolean buscarComprador(String termo) {
+        List<RegistroComprador> resultados = compradores.stream()
+            .filter(c -> c.getNomeComprador().toLowerCase().contains(termo))
+            .collect(Collectors.toList());
+        
+        if (resultados.isEmpty()) {
+            return false;
+        }
+        System.out.println("\n|--- COMPRADORES ENCONTRADOS ----|");
+        resultados.forEach(c -> System.out.println(c.getDetalhesCompletos()));
+        return true;
+    }
+    
+    // Metódo de Buscar: Produto
+    private static boolean buscarProduto(String termo) {
+        List<RegistroProduto> resultados = produtos.stream()
+            .filter(p -> p.getNomeProduto().toLowerCase().contains(termo))
+            .collect(Collectors.toList());
+        
+        if (resultados.isEmpty()) {
+            return false;
+        }
+        System.out.println("\n|----- PRODUTOS ENCONTRADOS -----|");
+        resultados.forEach(p -> System.out.println(p.getDetalhesCompletos()));
+        return true;
+    }
+    
+    // Metódo para Listar Todos os Registros
+    private static void listarTodos() {
+        System.out.println("\n|------ LISTAGEM COMPLETA -------|");
+        
+        if (compradores.isEmpty() && vendedores.isEmpty() && produtos.isEmpty()) {
+            System.out.println("Não há registros no sistema!");
+            return;
+        }
+        
+        if (!compradores.isEmpty()) {
+            System.out.println("\n|--------- COMPRADORES ----------|");
+            compradores.forEach(c -> System.out.println(c.getDetalhesCompletos()));
+        }
+        
+        if (!vendedores.isEmpty()) {
+            System.out.println("\n|---------- VENDEDORES ----------|");
+            vendedores.forEach(v -> System.out.println(v.getDetalhesCompletos()));
+        }
+        
+        if (!produtos.isEmpty()) {
+            System.out.println("\n|----------- PRODUTOS -----------|");
+            produtos.forEach(p -> System.out.println(p.getDetalhesCompletos()));
+        }
+    }
+}
+
+//*************************************************************************************************************************
+TÁ DANDO PARA COLOCAR CPF/CNPJ IGUAIS
+
+/**
+ * Classe RegistroVendedor: Representa um vendedor no sistema de vendas online.
+ * Armazena o nome e o CNPJ do vendedor, com métodos para acesso e exibição.
+ */
+class RegistroVendedor {
+    private String nomeVendedor;     // Atributo privado para o nome do vendedor (ex.: "Loja ABC")
+    private String cnpj;             // Atributo privado para o CNPJ 
+    
+    /**
+     * Construtor da classe RegistroVendedor.
+     * @param nomeVendedor Nome do vendedor
+     * @param cnpj CNPJ do vendedor
+     */
+    public RegistroVendedor(String nomeVendedor, String cnpj) {
+        this.nomeVendedor = nomeVendedor;
+        this.cnpj = cnpj;
+    }
+    
+    /**
+     * Método getter para o atributo nomeVendedor.
+     * @return O nome do vendedor (String)
+     */
+    public String getNomeVendedor() {
+        return nomeVendedor;
+    }
+    
+    /**
+     * Método getter para o atributo CNPJ.
+     * @return O CNPJ do vendedor (String)
+     */
+    public String getCNPJ() {
+        return cnpj;
+    }
+    
+    /**
+     * Retorna os detalhes completos do vendedor em formato de texto.
+     * @return String com todos os detalhes do vendedor
+     */
+    public String getDetalhesCompletos() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("|----- DETALHES DO VENDEDOR -----|\n");
+        sb.append("Nome: ").append(nomeVendedor).append("\n");
+        sb.append("CNPJ: ").append(cnpj);
+        return sb.toString();
+    }
+    
+    /**
+     * Sobrescreve o método toString da classe Object.
+     * @return String representando o vendedor
+     */
+    @Override
+    public String toString() {
+        return "Vendedor: " + nomeVendedor + " - CNPJ: " + cnpj;
+    }
+}
+
+/**
+ * Classe RegistroComprador: Representa um comprador no sistema de vendas online.
+ * Armazena o nome e o CPF do comprador, com método para exibição.
+ */
+class RegistroComprador {
+    private String nomeComprador;    // Atributo privado para o nome do comprador
+    private String cpf;              // Atributo privado para o CPF
+    
+    /**
+     * Construtor da classe RegistroComprador.
+     * @param nomeComprador Nome do comprador
+     * @param cpf CPF do comprador
+     */
+    public RegistroComprador(String nomeComprador, String cpf) {
+        this.nomeComprador = nomeComprador;
+        this.cpf = cpf;
+    }
+    
+    /**
+     * Método getter para o atributo nomeComprador.
+     * @return O nome do comprador (String)
+     */
+    public String getNomeComprador() {
+        return nomeComprador;
+    }
+    
+    /**
+     * Método getter para o atributo CPF.
+     * @return O CPF do comprador (String)
+     */
+    public String getCPF() {
+        return cpf;
+    }
+    
+    /**
+     * Retorna os detalhes completos do comprador em formato de texto.
+     * @return String com todos os detalhes do comprador
+     */
+    public String getDetalhesCompletos() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("|---- DETALHES DO COMPRADOR -----|\n");
+        sb.append("Nome: ").append(nomeComprador).append("\n");
+        sb.append("CPF: ").append(cpf);
+        return sb.toString();
+    }
+    
+    /**
+     * Sobrescreve o método toString da classe Object.
+     * @return String representando o comprador
+     */
+    @Override
+    public String toString() {
+        return "Comprador: " + nomeComprador + " - CPF: " + cpf;
+    }
+}
+
+/**
+ * Classe RegistroProduto: Representa um produto no sistema de vendas online.
+ * Armazena informações detalhadas do produto, incluindo dados fiscais e impostos.
+ */
+class RegistroProduto {
+    // Atributos básicos
+    private String nomeProduto;
+    private double preco;
+    private RegistroVendedor vendedor;
+    
+    // Atributos fiscais e detalhados
+    private String descricaoCompleta;
+    private String codigoNCM;
+    private double quantidade;
+    private String unidade;
+    private String codigoCFOP;
+    private double valorSemImpostos;
+    private double valorImpostos;
+    private double valorTotal;
+    private String informacoesComplementares;
+    
+    // Impostos aplicáveis
+    private Map<String, Double> impostos;
+
+    /**
+     * Construtor da classe RegistroProduto com todos os atributos.
+     * @param nomeProduto Nome do produto
+     * @param preco Preço unitário do produto
+     * @param vendedor Vendedor associado ao produto
+     * @param descricaoCompleta Descrição detalhada do produto
+     * @param codigoNCM Código NCM (Nomenclatura Comum do Mercosul)
+     * @param quantidade Quantidade do produto
+     * @param unidade Peso (kg, g, t, etc)
+     * @param codigoCFOP Código CFOP (Código Fiscal de Operações e Prestações)
+     * @param valorSemImpostos Valor da operação sem impostos
+     * @param valorImpostos Valor dos impostos
+     * @param valorTotal Valor total da operação com impostos
+     * @param informacoesComplementares Informações adicionais sobre o produto
+     * @param impostos Mapa com os impostos aplicáveis e suas alíquotas
+     */
+    public RegistroProduto(
+            String nomeProduto, 
+            double preco, 
+            RegistroVendedor vendedor,
+            String descricaoCompleta,
+            String codigoNCM,
+            double quantidade,
+            String unidade,
+            String codigoCFOP,
+            double valorSemImpostos,
+            double valorImpostos,
+            double valorTotal,
+            String informacoesComplementares,
+            Map<String, Double> impostos) {
+        
+        this.nomeProduto = nomeProduto;
+        this.preco = preco;
+        this.vendedor = vendedor;
+        this.descricaoCompleta = descricaoCompleta;
+        this.codigoNCM = codigoNCM;
+        this.quantidade = quantidade;
+        this.unidade = unidade;
+        this.codigoCFOP = codigoCFOP;
+        this.valorSemImpostos = valorSemImpostos;
+        this.valorImpostos = valorImpostos;
+        this.valorTotal = valorTotal;
+        this.informacoesComplementares = informacoesComplementares;
+        this.impostos = impostos;
+    }
+
+    /**
+     * Método getter para o atributo nomeProduto.
+     * @return O nome do produto
+     */
+    public String getNomeProduto() {
+        return nomeProduto;
+    }
+    
+    /**
+     * Método getter para o atributo preco.
+     * @return O preço unitário do produto
+     */
+    public double getPreco() {
+        return preco;
+    }
+    
+    /**
+     * Método getter para o atributo vendedor.
+     * @return O vendedor associado ao produto
+     */
+    public RegistroVendedor getVendedor() {
+        return vendedor;
+    }
+    
+    /**
+     * Método getter para o atributo descricaoCompleta.
+     * @return A descrição completa do produto
+     */
+    public String getDescricaoCompleta() {
+        return descricaoCompleta;
+    }
+    
+    /**
+     * Método getter para o atributo codigoNCM.
+     * @return O código NCM do produto
+     */
+    public String getCodigoNCM() {
+        return codigoNCM;
+    }
+    
+    /**
+     * Método getter para o atributo quantidade.
+     * @return A quantidade do produto
+     */
+    public double getQuantidade() {
+        return quantidade;
+    }
+    
+    /**
+     * Método getter para o atributo unidade.
+     * @return O peso do produto
+     */
+    public String getUnidade() {
+        return unidade;
+    }
+    
+    /**
+     * Método getter para o atributo codigoCFOP.
+     * @return O código CFOP do produto
+     */
+    public String getCodigoCFOP() {
+        return codigoCFOP;
+    }
+    
+    /**
+     * Método getter para o atributo valorSemImpostos.
+     * @return O valor da operação sem impostos
+     */
+    public double getValorSemImpostos() {
+        return valorSemImpostos;
+    }
+    
+    /**
+     * Método getter para o atributo valorImpostos.
+     * @return O valor dos impostos
+     */
+    public double getValorImpostos() {
+        return valorImpostos;
+    }
+    
+    /**
+     * Método getter para o atributo valorTotal.
+     * @return O valor total da operação com impostos
+     */
+    public double getValorTotal() {
+        return valorTotal;
+    }
+    
+    /**
+     * Método getter para o atributo informacoesComplementares.
+     * @return As informações complementares do produto
+     */
+    public String getInformacoesComplementares() {
+        return informacoesComplementares;
+    }
+    
+    /**
+     * Método getter para o atributo impostos.
+     * @return Mapa com os impostos aplicáveis e suas alíquotas
+     */
+    public Map<String, Double> getImpostos() {
+        return impostos;
+    }
+    
+    /**
+     * Retorna os detalhes completos do produto em formato de texto.
+     * @return String com todos os detalhes do produto
+     */
+    public String getDetalhesCompletos() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("|----- DETALHES DO PRODUTO ------|\n");
+        sb.append("Nome: ").append(nomeProduto).append("\n");
+        sb.append("Descrição: ").append(descricaoCompleta).append("\n");
+        sb.append("Preço unitário: R$ ").append(String.format("%.10f", preco)).append("\n");
+        sb.append("Quantidade: ").append(quantidade).append("\n").append("Peso: ").append(unidade).append("\n");
+        sb.append("Valor sem impostos: R$ ").append(String.format("%.10f", valorSemImpostos)).append("\n");
+        sb.append("Código NCM: ").append(codigoNCM).append("\n");
+        sb.append("Código CFOP: ").append(codigoCFOP).append("\n");
+        sb.append("Vendedor: ").append(vendedor.getNomeVendedor()).append(" (CNPJ: ").append(vendedor.getCNPJ()).append(")\n");
+        
+        // Detalhes dos impostos
+        sb.append("\nImpostos aplicáveis:\n");
+        if (impostos.isEmpty()) {
+            sb.append("Nenhum imposto aplicável!\n");
+        } else {
+            for (Map.Entry<String, Double> imposto : impostos.entrySet()) {
+                double valorImposto = valorSemImpostos * (imposto.getValue() / 100.0);
+                sb.append("- ").append(imposto.getKey()).append(": ")
+                  .append(String.format("%.10f", imposto.getValue())).append("% (R$ ")
+                  .append(String.format("%.10f", valorImposto)).append(")\n");
+            }
+            sb.append("Total de impostos: R$ ").append(String.format("%.10f", valorImpostos)).append("\n");
+        }
+        
+        sb.append("\nValor total com impostos: R$ ").append(String.format("%.10f", valorTotal)).append("\n");
+        sb.append("Informações complementares: ").append(informacoesComplementares);
+        return sb.toString();
+    }
+
+    /**
+     * Sobrescreve o método toString da classe Object.
+     * @return String representando o produto
+     */
+    @Override
+    public String toString() {
+        return "Produto: " + nomeProduto + 
+               " - R$ " + String.format("%.10f", preco) + 
+               " - Quantidade: " + quantidade + " Peso: " + unidade +
+               " - Total com impostos: R$ " + String.format("%.10f", valorTotal) +
+               " - Vendedor: " + vendedor.getNomeVendedor();
+    }
+}
