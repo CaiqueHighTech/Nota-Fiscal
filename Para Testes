@@ -19,6 +19,8 @@ import java.util.ArrayList;         // Interface para armazenar elementos dinâm
 import java.util.List;              // Interface para manipular métodos/dados
 import java.util.Map;               // Interface para definir chave-valor
 import java.util.HashMap;           // Implemento para armazenar chave-valor
+import java.util.Set;               // Interface para coleção de elementos únicos
+import java.util.HashSet;           // Implemento para armazenar chave-valor
 import java.util.Optional;          // Classe para tratamento de ausência de valor (null)
 import java.util.regex.Pattern;     // Permitir operações avançadas de manipulação e busca de texto
 import java.util.stream.Collectors; // Permitir coletar e processar elementos de fluxos
@@ -185,6 +187,7 @@ public class SistemaNotaFiscal {
     }
     
     // Metódo para Validar o CPF/CNPJ
+    private static Set<String> documentosRegistrados = new HashSet<>();
     private static String lerCC(Scanner scanner) {
         Pattern padraoCPF = Pattern.compile("^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$");
         Pattern padraoCNPJ = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$");
@@ -193,9 +196,18 @@ public class SistemaNotaFiscal {
             System.out.print("Digite o CPF ou CNPJ: ");
             String documento = scanner.nextLine().trim();
 
-            if (padraoCPF.matcher(documento).matches()) {
-                return ": " + documento;
-            } else if (padraoCNPJ.matcher(documento).matches()) {
+            if (documentosRegistrados.contains(documento)) {
+                System.out.println("Erro: Este documento já foi inserido!");
+                System.out.print("Deseja tentar novamente? (S/N): ");
+                String resposta = scanner.nextLine().trim().toUpperCase();
+                if (!resposta.equals("S")) {
+                    return null;
+                }
+                continue;
+            }
+
+            if (padraoCPF.matcher(documento).matches() || padraoCNPJ.matcher(documento).matches()) {
+                documentosRegistrados.add(documento);
                 return ": " + documento;
             } else {
                 System.out.println("Erro: O documento deve seguir um dos formatos esperados!");
