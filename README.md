@@ -1,5 +1,3 @@
 # Nota-Fiscal
 
-v - Criação de um emissor de nota fiscal.
-v - Permitir escolher CPF/CNPJ para Comprador/Vendedor.
-x - Melhorar a interface.
+ANALISAR DA LINHA 619 PARA BAIXO (DÁ PARA DUPLICAR OS CPF/CNPJ)
