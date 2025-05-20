@@ -42,6 +42,7 @@ public class SistemaNotaFiscal {
         ALIQUOTAS_ICMS.put("RO", 19.5); // Rondônia
         ALIQUOTAS_ICMS.put("RR", 20.0); // Roraima
         ALIQUOTAS_ICMS.put("TO", 18.0); // Tocantins
+        
         // Região Nordeste
         ALIQUOTAS_ICMS.put("AL", 18.0); // Alagoas
         ALIQUOTAS_ICMS.put("BA", 19.0); // Bahia
@@ -52,16 +53,19 @@ public class SistemaNotaFiscal {
         ALIQUOTAS_ICMS.put("PI", 22.5); // Piauí
         ALIQUOTAS_ICMS.put("RN", 20.0); // Rio Grande do Norte
         ALIQUOTAS_ICMS.put("SE", 20.0); // Sergipe
+        
         // Região Centro-Oeste
         ALIQUOTAS_ICMS.put("DF", 18.0); // Distrito Federal
         ALIQUOTAS_ICMS.put("GO", 17.0); // Goiás
         ALIQUOTAS_ICMS.put("MT", 17.0); // Mato Grosso
         ALIQUOTAS_ICMS.put("MS", 17.0); // Mato Grosso do Sul
+        
         // Região Sudeste
         ALIQUOTAS_ICMS.put("ES", 17.0); // Espírito Santo
         ALIQUOTAS_ICMS.put("MG", 18.0); // Minas Gerais
         ALIQUOTAS_ICMS.put("RJ", 20.0); // Rio de Janeiro
         ALIQUOTAS_ICMS.put("SP", 18.0); // São Paulo
+        
         // Região Sul
         ALIQUOTAS_ICMS.put("PR", 19.0); // Paraná
         ALIQUOTAS_ICMS.put("RS", 17.0); // Rio Grande do Sul
@@ -131,7 +135,8 @@ public class SistemaNotaFiscal {
         try {
             return Integer.parseInt(scanner.nextLine().trim());
         } catch (NumberFormatException e) {
-            return -1; // Retorna opção inválida (opção não declarada)
+            // Retorna opção inválida (opção não declarada)
+            return -1; 
         }
     }
     
@@ -148,39 +153,13 @@ public class SistemaNotaFiscal {
         }
         
         // Validação do CPF/CNPJ no formato oficial
-        String codigo = lerCV(scanner);
+        String codigo = lerCC(scanner);
         if (codigo == null) {
             return;
         }
         RegistroVendedor vendedor = new RegistroVendedor(nome, codigo);
         vendedores.add(vendedor);
         System.out.println("Vendedor registrado com sucesso!");
-    }
-    
-    // Metódo para Validar o CPF/CNPJ
-    private static String lerCV(Scanner scanner) {
-        Pattern padraoCPF = Pattern.compile("^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$");
-        Pattern padraoCNPJ = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$");
-
-        while (true) {
-            System.out.print("Digite o CPF ou CNPJ: ");
-            String documento = scanner.nextLine().trim();
-
-            if (padraoCPF.matcher(documento).matches()) {
-                return "CPF válido: " + documento;
-            } else if (padraoCNPJ.matcher(documento).matches()) {
-                return "CNPJ válido: " + documento;
-            } else {
-                System.out.println("Erro: O documento deve seguir um dos formatos esperados!");
-                System.out.println("CPF: XXX.XXX.XXX-XX      (Ex: 123.456.789-00)");
-                System.out.println("CNPJ: XX.XXX.XXX/XXXX-XX (Ex: 12.345.678/0001-23)");
-                System.out.print("Deseja tentar novamente? (S/N): ");
-                String resposta = scanner.nextLine().trim().toUpperCase();
-                if (!resposta.equals("S")) {
-                    return null;
-                }
-            }
-        }
     }
     
     // Metódo para Registrar: Comprador
@@ -200,7 +179,6 @@ public class SistemaNotaFiscal {
         if (codigo == null) {
             return;
         }
-        
         RegistroComprador comprador = new RegistroComprador(nome, codigo);
         compradores.add(comprador);
         System.out.println("Comprador registrado com sucesso!");
@@ -356,6 +334,7 @@ public class SistemaNotaFiscal {
                     return null;
                 }
             } else {
+                
                 // Verifica se o primeiro caractere é um dígito ou ponto decimal para garantir que o peso começa com um valor numérico
                 if (!Character.isDigit(peso.charAt(0)) && peso.charAt(0) != '.') {
                     System.out.println("Erro: O peso deve começar com um valor numérico!");
@@ -365,6 +344,7 @@ public class SistemaNotaFiscal {
                         return null;
                     }
                 } else {
+                    
                     // Tenta extrair a parte numérica para validar se é maior que zero
                     try {
                         String[] partes = peso.split(" ");
@@ -599,14 +579,14 @@ public class SistemaNotaFiscal {
             return;
         }
         
-        if (!compradores.isEmpty()) {
-            System.out.println("\n|--------- COMPRADORES ----------|");
-            compradores.forEach(c -> System.out.println(c.getDetalhesCompletos()));
-        }
-        
         if (!vendedores.isEmpty()) {
             System.out.println("\n|---------- VENDEDORES ----------|");
             vendedores.forEach(v -> System.out.println(v.getDetalhesCompletos()));
+        }
+        
+        if (!compradores.isEmpty()) {
+            System.out.println("\n|--------- COMPRADORES ----------|");
+            compradores.forEach(c -> System.out.println(c.getDetalhesCompletos()));
         }
         
         if (!produtos.isEmpty()) {
@@ -617,7 +597,6 @@ public class SistemaNotaFiscal {
 }
 
 //*************************************************************************************************************************
-TÁ DANDO PARA COLOCAR CPF/CNPJ IGUAIS
 
 /**
  * Classe RegistroVendedor: Representa um vendedor no sistema de vendas online.
