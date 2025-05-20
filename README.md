@@ -1,3 +1,3 @@
 # Nota-Fiscal
 
-TÁ DANDO PARA DUPLICAR OS CPS/CNPJ (EM AMBOS OS CÓDIGOS)
+Fiz o que pude para ficar organizado, com poucas linhas e sem a possibilidade de se repetir o CC (CPF/CNPJ).
