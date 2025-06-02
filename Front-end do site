@@ -1,69 +1,1022 @@
+// Imports for Swing and AWT
 import javax.swing.*;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
+import java.text.NumberFormat;
+import java.text.ParseException;
+import java.util.Locale;
 
+// Imports for Backend Logic
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Vector;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+/**
+ * Classe principal que integra o Front-End Swing com o Back-End NotaFiscalService.
+ * Permite o cadastro de vendedores, compradores, produtos (associando comprador)
+ * e a listagem geral.
+ * 
+ * @author Manus
+ * @version 4.0 (GUI com Associação Comprador-Produto)
+ */
 public class EstiloJava {
+
+    // Instância do serviço de back-end
+    private static NotaFiscalService notaFiscalService = new NotaFiscalService();
+    private static JComboBox<RegistroVendedor> vendedorComboBox; // ComboBox para selecionar vendedor
+    private static JComboBox<RegistroComprador> compradorComboBox; // ComboBox para selecionar comprador
+    private static JTextArea vendedoresTextArea, compradoresTextArea, produtosTextArea; // TextAreas para listagem
+    private static final Locale BRAZIL_LOCALE = new Locale("pt", "BR");
+    private static final NumberFormat CURRENCY_FORMAT = NumberFormat.getCurrencyInstance(BRAZIL_LOCALE);
+    private static final NumberFormat NUMBER_FORMAT = NumberFormat.getNumberInstance(BRAZIL_LOCALE);
+
     public static void main(String[] args) {
-        JFrame frame = new JFrame("Campo de Emissão de Nota Fiscal");
-        frame.setSize(400, 250);
+        // Garante que a GUI seja criada e exibida na Event Dispatch Thread (EDT)
+        SwingUtilities.invokeLater(() -> createAndShowGUI());
+    }
+
+    /**
+     * Cria e configura a interface gráfica principal com abas.
+     */
+    private static void createAndShowGUI() {
+        JFrame frame = new JFrame("Sistema de Nota Fiscal");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new GridBagLayout());
-        frame.getContentPane().setBackground(Color.LIGHT_GRAY);
+        frame.setMinimumSize(new Dimension(700, 650)); // Aumenta tamanho mínimo
 
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Arial", Font.BOLD, 14));
 
-        JLabel titulo = new JLabel("Campo de Emissão de Nota Fiscal", SwingConstants.CENTER);
-        titulo.setFont(new Font("SansSerif", Font.BOLD, 16));
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.gridwidth = 2;
-        frame.add(titulo, gbc);
+        // --- Aba Cadastro Vendedor --- 
+        JPanel vendedorPanel = createVendedorPanel();
+        tabbedPane.addTab(" Cadastrar Vendedor ", null, vendedorPanel, "Cadastrar um novo vendedor");
 
-        JLabel cnpjLabel = new JLabel("CNPJ:");
-        gbc.gridy = 1;
-        gbc.gridwidth = 1;
-        frame.add(cnpjLabel, gbc);
+        // --- Aba Cadastro Comprador --- 
+        JPanel compradorPanel = createCompradorPanel();
+        tabbedPane.addTab(" Cadastrar Comprador ", null, compradorPanel, "Cadastrar um novo comprador");
 
-        JTextField cnpjField = new JTextField(20);
-        gbc.gridx = 1;
-        frame.add(cnpjField, gbc);
-
-        JLabel nomeLabel = new JLabel("Nome:");
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        frame.add(nomeLabel, gbc);
-
-        JTextField nomeField = new JTextField(20);
-        gbc.gridx = 1;
-        frame.add(nomeField, gbc);
-
-        JButton cadastrarButton = new JButton("Cadastrar");
-        cadastrarButton.setBackground(Color.WHITE);
-        cadastrarButton.setForeground(new Color(0, 128, 128));
-        cadastrarButton.setFocusPainted(false);
-        cadastrarButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        gbc.gridx = 0;
-        gbc.gridy = 3;
-        gbc.gridwidth = 2;
-        frame.add(cadastrarButton, gbc);
-
-        cadastrarButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String cnpj = cnpjField.getText();
-                String nome = nomeField.getText();
-                if (!cnpj.isEmpty() && !nome.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "Cadastrado com Sucesso!\nCNPJ: " + cnpj + "\nNome: " + nome);
-                } else {
-                    JOptionPane.showMessageDialog(frame, "Por favor, preencha todos os campos.", "Erro", JOptionPane.ERROR_MESSAGE);
+        // --- Aba Cadastro Produto --- 
+        JPanel produtoPanel = createProdutoPanel();
+        tabbedPane.addTab(" Cadastrar Produto ", null, produtoPanel, "Cadastrar um novo produto");
+        
+        // --- Aba Listar Todos --- 
+        JPanel listarPanel = createListarPanel();
+        tabbedPane.addTab(" Listar Todos ", null, listarPanel, "Listar todos os registros");
+        
+        // Atualiza ComboBoxes e Listagem quando abas são selecionadas
+        tabbedPane.addChangeListener(new ChangeListener() {
+            public void stateChanged(ChangeEvent e) {
+                if (tabbedPane.getSelectedComponent() == produtoPanel) {
+                    updateVendedorComboBox();
+                    updateCompradorComboBox(); // Atualiza compradores também
+                }
+                // Atualiza a listagem ao selecionar a aba "Listar Todos"
+                if (tabbedPane.getSelectedComponent() == listarPanel) {
+                    updateListagemGeral(); 
                 }
             }
         });
 
+        frame.add(tabbedPane, BorderLayout.CENTER);
+        frame.pack();
         frame.setLocationRelativeTo(null);
         frame.setVisible(true);
     }
+
+    // --- Painel de Cadastro de Vendedor --- 
+    private static JPanel createVendedorPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panel.setBackground(new Color(240, 240, 240));
+        GridBagConstraints gbc = createGBC();
+
+        addTitle(panel, gbc, "Cadastro de Vendedor");
+
+        // Campos
+        addLabelAndField(panel, gbc, "Nome:", 1, new JTextField(30));
+        addLabelAndField(panel, gbc, "CNPJ/CPF:", 2, new JTextField(30));
+
+        // Botão
+        JButton cadastrarButton = createButton("Cadastrar Vendedor");
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(20, 10, 15, 10);
+        panel.add(cadastrarButton, gbc);
+
+        // Ação do Botão
+        cadastrarButton.addActionListener(e -> {
+            JTextField nomeField = (JTextField) getComponentByName(panel, "Nome:");
+            JTextField codigoField = (JTextField) getComponentByName(panel, "CNPJ/CPF:");
+            
+            String nome = nomeField.getText().trim();
+            String codigo = codigoField.getText().trim();
+
+            if (nome.isEmpty() || codigo.isEmpty()) {
+                showWarning(panel, "Preencha Nome e CNPJ/CPF.");
+                return;
+            }
+
+            String resultado = notaFiscalService.registrarVendedor(nome, codigo);
+            if (resultado == null) {
+                showSuccess(panel, "Vendedor cadastrado com sucesso!");
+                nomeField.setText("");
+                codigoField.setText("");
+                updateVendedorComboBox(); // Atualiza a lista em Produto
+            } else {
+                showError(panel, resultado);
+            }
+        });
+
+        return panel;
+    }
+
+    // --- Painel de Cadastro de Comprador --- 
+    private static JPanel createCompradorPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panel.setBackground(new Color(240, 240, 240));
+        GridBagConstraints gbc = createGBC();
+
+        addTitle(panel, gbc, "Cadastro de Comprador");
+
+        // Campos
+        addLabelAndField(panel, gbc, "Nome:", 1, new JTextField(30));
+        addLabelAndField(panel, gbc, "CNPJ/CPF:", 2, new JTextField(30));
+
+        // Botão
+        JButton cadastrarButton = createButton("Cadastrar Comprador");
+        gbc.gridy = 3;
+        gbc.gridwidth = 2;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.insets = new Insets(20, 10, 15, 10);
+        panel.add(cadastrarButton, gbc);
+
+        // Ação do Botão
+        cadastrarButton.addActionListener(e -> {
+            JTextField nomeField = (JTextField) getComponentByName(panel, "Nome:");
+            JTextField codigoField = (JTextField) getComponentByName(panel, "CNPJ/CPF:");
+            
+            String nome = nomeField.getText().trim();
+            String codigo = codigoField.getText().trim();
+
+            if (nome.isEmpty() || codigo.isEmpty()) {
+                showWarning(panel, "Preencha Nome e CNPJ/CPF.");
+                return;
+            }
+
+            String resultado = notaFiscalService.registrarComprador(nome, codigo);
+            if (resultado == null) {
+                showSuccess(panel, "Comprador cadastrado com sucesso!");
+                nomeField.setText("");
+                codigoField.setText("");
+                updateCompradorComboBox(); // Atualiza a lista em Produto
+            } else {
+                showError(panel, resultado);
+            }
+        });
+
+        return panel;
+    }
+
+    // --- Painel de Cadastro de Produto --- 
+    private static JPanel createProdutoPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panel.setBackground(new Color(240, 240, 240));
+        GridBagConstraints gbc = createGBC();
+
+        addTitle(panel, gbc, "Cadastro de Produto");
+
+        // Campos do Produto (coluna 0 e 1)
+        int row = 1;
+        addLabelAndField(panel, gbc, "Nome Prod.:", row++, new JTextField(25));
+        addLabelAndField(panel, gbc, "Descrição:", row++, new JTextField(25));
+        addLabelAndField(panel, gbc, "Preço (R$):", row++, new JTextField(10));
+        addLabelAndField(panel, gbc, "Quantidade:", row++, new JTextField(10));
+        addLabelAndField(panel, gbc, "Peso/Unid.:", row++, new JTextField(10));
+        addLabelAndField(panel, gbc, "NCM:", row++, new JTextField(15));
+        addLabelAndField(panel, gbc, "CFOP:", row++, new JTextField(10));
+        addLabelAndField(panel, gbc, "Info Compl.:", row++, new JTextField(25));
+        
+        // Seleção de Vendedor
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.anchor = GridBagConstraints.EAST;
+        panel.add(createLabel("Vendedor:"), gbc);
+        
+        vendedorComboBox = new JComboBox<>();
+        vendedorComboBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        vendedorComboBox.setName("Vendedor:"); // Nome para busca
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel.add(vendedorComboBox, gbc);
+        row++;
+        
+        // Seleção de Comprador
+        gbc.gridx = 0;
+        gbc.gridy = row;
+        gbc.anchor = GridBagConstraints.EAST;
+        panel.add(createLabel("Comprador:"), gbc);
+        
+        compradorComboBox = new JComboBox<>();
+        compradorComboBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        compradorComboBox.setName("Comprador:"); // Nome para busca
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        panel.add(compradorComboBox, gbc);
+        row++;
+
+        // --- Painel de Impostos (coluna 2 e 3) --- 
+        JPanel impostosPanel = new JPanel(new GridBagLayout());
+        impostosPanel.setBorder(BorderFactory.createTitledBorder("Impostos Aplicáveis"));
+        impostosPanel.setBackground(panel.getBackground());
+        GridBagConstraints gbcImpostos = createGBC();
+        gbcImpostos.anchor = GridBagConstraints.WEST;
+
+        JCheckBox ipiCheck = createCheckbox("IPI");
+        JCheckBox pisCheck = createCheckbox("PIS");
+        JCheckBox cofinsCheck = createCheckbox("COFINS");
+        JCheckBox irpjCheck = createCheckbox("IRPJ");
+        JCheckBox csllCheck = createCheckbox("CSLL");
+        JCheckBox iiCheck = createCheckbox("II (Import.)");
+        JCheckBox itbiCheck = createCheckbox("ITBI");
+        JCheckBox icmsCheck = createCheckbox("ICMS");
+        JTextField ufField = new JTextField(3);
+        ufField.setFont(new Font("Arial", Font.PLAIN, 12));
+        ufField.setEnabled(false); // Desabilitado por padrão
+        ufField.setName("UF:"); // Nome para busca
+
+        int impostoRow = 0;
+        gbcImpostos.gridx = 0;
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(ipiCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(pisCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(cofinsCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(irpjCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(csllCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(iiCheck, gbcImpostos);
+        gbcImpostos.gridy = impostoRow++; impostosPanel.add(itbiCheck, gbcImpostos);
+        
+        // ICMS e UF na mesma linha
+        gbcImpostos.gridy = impostoRow;
+        impostosPanel.add(icmsCheck, gbcImpostos);
+        gbcImpostos.gridx = 1;
+        gbcImpostos.insets = new Insets(2, 5, 2, 2);
+        impostosPanel.add(createLabel("UF:"), gbcImpostos);
+        gbcImpostos.gridx = 2;
+        gbcImpostos.insets = new Insets(2, 0, 2, 2);
+        impostosPanel.add(ufField, gbcImpostos);
+
+        // Habilita/Desabilita campo UF baseado no ICMS
+        icmsCheck.addItemListener(e -> ufField.setEnabled(e.getStateChange() == ItemEvent.SELECTED));
+
+        // Adiciona painel de impostos à direita
+        gbc.gridx = 2; 
+        gbc.gridy = 1;
+        gbc.gridheight = row; // Ocupa a altura dos campos
+        gbc.gridwidth = 1;
+        gbc.fill = GridBagConstraints.VERTICAL;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.insets = new Insets(8, 20, 8, 8); // Espaço à esquerda
+        panel.add(impostosPanel, gbc);
+
+        // --- Botão Cadastrar Produto --- 
+        JButton cadastrarButton = createButton("Cadastrar Produto");
+        gbc.gridx = 0;
+        gbc.gridy = row + 1; // Abaixo dos campos e do painel de impostos
+        gbc.gridwidth = 3; // Ocupa toda a largura
+        gbc.gridheight = 1;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(20, 10, 15, 10);
+        panel.add(cadastrarButton, gbc);
+
+        // Ação do Botão Cadastrar Produto
+        cadastrarButton.addActionListener(e -> {
+            // Coleta dados dos campos
+            String nome = ((JTextField) getComponentByName(panel, "Nome Prod.:")).getText().trim();
+            String desc = ((JTextField) getComponentByName(panel, "Descrição:")).getText().trim();
+            String precoStr = ((JTextField) getComponentByName(panel, "Preço (R$):")).getText().trim();
+            String qtdStr = ((JTextField) getComponentByName(panel, "Quantidade:")).getText().trim();
+            String unid = ((JTextField) getComponentByName(panel, "Peso/Unid.:")).getText().trim();
+            String ncm = ((JTextField) getComponentByName(panel, "NCM:")).getText().trim();
+            String cfop = ((JTextField) getComponentByName(panel, "CFOP:")).getText().trim();
+            String info = ((JTextField) getComponentByName(panel, "Info Compl.:")).getText().trim();
+            RegistroVendedor vendedorSel = (RegistroVendedor) vendedorComboBox.getSelectedItem();
+            RegistroComprador compradorSel = (RegistroComprador) compradorComboBox.getSelectedItem(); // Pega comprador
+            String uf = ufField.getText().trim().toUpperCase();
+
+            // Validação inicial
+            if (vendedorSel == null) {
+                showWarning(panel, "Nenhum vendedor selecionado ou cadastrado.");
+                return;
+            }
+             if (compradorSel == null) { // Valida comprador
+                showWarning(panel, "Nenhum comprador selecionado ou cadastrado.");
+                return;
+            }
+            if (nome.isEmpty() || precoStr.isEmpty() || qtdStr.isEmpty() || unid.isEmpty() || ncm.isEmpty() || cfop.isEmpty()) {
+                showWarning(panel, "Preencha todos os campos obrigatórios do produto (Nome, Preço, Qtd, Peso/Unid, NCM, CFOP).");
+                return;
+            }
+
+            // Conversão de números
+            double preco, quantidade;
+            try {
+                preco = parseDouble(precoStr);
+            } catch (ParseException ex) {
+                showError(panel, "Erro ao converter Preço. Use formato numérico (ex: 10,50).");
+                return;
+            }
+             try {
+                quantidade = parseDouble(qtdStr);
+            } catch (ParseException ex) {
+                showError(panel, "Erro ao converter Quantidade. Use formato numérico (ex: 5).");
+                return;
+            }
+
+            // Coleta impostos selecionados
+            Set<String> impostosSelecionados = new HashSet<>();
+            if (ipiCheck.isSelected()) impostosSelecionados.add("IPI");
+            if (pisCheck.isSelected()) impostosSelecionados.add("PIS");
+            if (cofinsCheck.isSelected()) impostosSelecionados.add("COFINS");
+            if (irpjCheck.isSelected()) impostosSelecionados.add("IRPJ");
+            if (csllCheck.isSelected()) impostosSelecionados.add("CSLL");
+            if (iiCheck.isSelected()) impostosSelecionados.add("II (Import.)"); // Nome do checkbox
+            if (itbiCheck.isSelected()) impostosSelecionados.add("ITBI");
+            if (icmsCheck.isSelected()) {
+                if (uf.isEmpty()) {
+                    showWarning(panel, "UF é obrigatória quando ICMS está selecionado.");
+                    return;
+                }
+                impostosSelecionados.add("ICMS");
+            }
+
+            // Chama o serviço de back-end (passando o comprador selecionado)
+            String resultado = notaFiscalService.registrarProduto(
+                nome, preco, desc, ncm, quantidade, unid, cfop, info, 
+                impostosSelecionados, uf, vendedorSel, compradorSel // Passa o comprador
+            );
+
+            // Exibe resultado
+            if (resultado == null) {
+                showSuccess(panel, "Produto cadastrado com sucesso!");
+                // Limpar campos do produto
+                ((JTextField) getComponentByName(panel, "Nome Prod.:")).setText("");
+                ((JTextField) getComponentByName(panel, "Descrição:")).setText("");
+                ((JTextField) getComponentByName(panel, "Preço (R$):")).setText("");
+                ((JTextField) getComponentByName(panel, "Quantidade:")).setText("");
+                ((JTextField) getComponentByName(panel, "Peso/Unid.:")).setText("");
+                ((JTextField) getComponentByName(panel, "NCM:")).setText("");
+                ((JTextField) getComponentByName(panel, "CFOP:")).setText("");
+                ((JTextField) getComponentByName(panel, "Info Compl.:")).setText("");
+                ufField.setText("");
+                ipiCheck.setSelected(false); pisCheck.setSelected(false); cofinsCheck.setSelected(false);
+                irpjCheck.setSelected(false); csllCheck.setSelected(false); iiCheck.setSelected(false);
+                itbiCheck.setSelected(false); icmsCheck.setSelected(false);
+                // Não limpar ComboBoxes
+            } else {
+                showError(panel, resultado);
+            }
+        });
+
+        return panel;
+    }
+    
+    // --- Painel de Listagem Geral --- 
+    private static JPanel createListarPanel() {
+        JPanel panel = new JPanel(new BorderLayout(10, 10)); // Layout principal
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+        panel.setBackground(new Color(240, 240, 240));
+
+        // Título
+        JLabel titulo = new JLabel("Listagem Geral de Registros", SwingConstants.CENTER);
+        titulo.setFont(new Font("Arial", Font.BOLD, 16));
+        titulo.setForeground(new Color(0, 102, 102));
+        panel.add(titulo, BorderLayout.NORTH);
+
+        // Painel com as áreas de texto (usando GridBagLayout para dividir)
+        JPanel displayPanel = new JPanel(new GridBagLayout());
+        displayPanel.setBackground(panel.getBackground());
+        GridBagConstraints gbc = createGBC();
+        gbc.fill = GridBagConstraints.BOTH; // Preencher espaço
+        gbc.weightx = 1.0; // Distribuir espaço horizontalmente
+        gbc.weighty = 1.0; // Distribuir espaço verticalmente
+
+        // Área Vendedores
+        vendedoresTextArea = createTextArea();
+        JScrollPane scrollVendedores = new JScrollPane(vendedoresTextArea);
+        scrollVendedores.setBorder(BorderFactory.createTitledBorder("Vendedores"));
+        gbc.gridx = 0; gbc.gridy = 0; displayPanel.add(scrollVendedores, gbc);
+
+        // Área Compradores
+        compradoresTextArea = createTextArea();
+        JScrollPane scrollCompradores = new JScrollPane(compradoresTextArea);
+        scrollCompradores.setBorder(BorderFactory.createTitledBorder("Compradores"));
+        gbc.gridx = 1; gbc.gridy = 0; displayPanel.add(scrollCompradores, gbc);
+
+        // Área Produtos
+        produtosTextArea = createTextArea();
+        JScrollPane scrollProdutos = new JScrollPane(produtosTextArea);
+        scrollProdutos.setBorder(BorderFactory.createTitledBorder("Produtos (Detalhes Completos)"));
+        gbc.gridx = 0; gbc.gridy = 1; gbc.gridwidth = 2; // Ocupa duas colunas
+        displayPanel.add(scrollProdutos, gbc);
+
+        panel.add(displayPanel, BorderLayout.CENTER);
+
+        // Botão Atualizar
+        JButton atualizarButton = createButton("Atualizar Listagem");
+        atualizarButton.addActionListener(e -> updateListagemGeral());
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBackground(panel.getBackground());
+        buttonPanel.add(atualizarButton);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        // Atualiza a listagem ao criar o painel pela primeira vez
+        updateListagemGeral(); 
+
+        return panel;
+    }
+    
+    // --- Métodos Utilitários da GUI --- 
+
+    private static GridBagConstraints createGBC() {
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(5, 5, 5, 5);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.anchor = GridBagConstraints.WEST;
+        return gbc;
+    }
+
+    private static JLabel createLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        return label;
+    }
+    
+    private static JCheckBox createCheckbox(String text) {
+        JCheckBox checkbox = new JCheckBox(text);
+        checkbox.setFont(new Font("Arial", Font.PLAIN, 12));
+        checkbox.setBackground(null); // Fundo transparente
+        checkbox.setName(text); // Nome para busca
+        return checkbox;
+    }
+
+    private static JButton createButton(String text) {
+        JButton button = new JButton(text);
+        button.setBackground(new Color(0, 128, 128));
+        button.setForeground(Color.WHITE);
+        button.setFocusPainted(false);
+        button.setFont(new Font("Arial", Font.BOLD, 12));
+        button.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+    
+    private static JTextArea createTextArea() {
+        JTextArea textArea = new JTextArea(10, 30); // Tamanho inicial
+        textArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        textArea.setEditable(false);
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        return textArea;
+    }
+
+    private static void addTitle(JPanel panel, GridBagConstraints gbc, String titleText) {
+        JLabel titulo = new JLabel(titleText, SwingConstants.CENTER);
+        titulo.setFont(new Font("Arial", Font.BOLD, 16));
+        titulo.setForeground(new Color(0, 102, 102));
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.gridwidth = 3; // Ocupa mais colunas se necessário
+        gbc.anchor = GridBagConstraints.CENTER;
+        gbc.insets = new Insets(10, 10, 15, 10);
+        panel.add(titulo, gbc);
+        gbc.gridwidth = 1; // Restaura para 1 coluna
+        gbc.anchor = GridBagConstraints.WEST;
+        gbc.insets = new Insets(5, 5, 5, 5);
+    }
+
+    private static void addLabelAndField(JPanel panel, GridBagConstraints gbc, String labelText, int gridy, JComponent field) {
+        gbc.gridx = 0;
+        gbc.gridy = gridy;
+        gbc.anchor = GridBagConstraints.EAST;
+        JLabel label = createLabel(labelText);
+        panel.add(label, gbc);
+
+        gbc.gridx = 1;
+        gbc.anchor = GridBagConstraints.WEST;
+        field.setFont(new Font("Arial", Font.PLAIN, 12));
+        field.setName(labelText); // Define o nome para busca posterior
+        panel.add(field, gbc);
+    }
+
+    // Busca um componente pelo nome (definido no addLabelAndField ou createCheckbox)
+    private static JComponent getComponentByName(Container container, String name) {
+        for (Component comp : container.getComponents()) {
+            if (name.equals(comp.getName())) {
+                return (JComponent) comp;
+            }
+            // Busca recursiva em sub-painéis (como o de impostos)
+            if (comp instanceof Container) {
+                JComponent found = getComponentByName((Container) comp, name);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null; // Não encontrado
+    }
+
+    private static void showMessage(Component parent, String message, String title, int messageType) {
+        JOptionPane.showMessageDialog(parent, message, title, messageType);
+    }
+
+    private static void showSuccess(Component parent, String message) {
+        showMessage(parent, message, "Sucesso", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private static void showError(Component parent, String message) {
+        showMessage(parent, message, "Erro", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private static void showWarning(Component parent, String message) {
+        showMessage(parent, message, "Atenção", JOptionPane.WARNING_MESSAGE);
+    }
+    
+    // Atualiza o ComboBox de vendedores na aba de produtos
+    private static void updateVendedorComboBox() {
+        if (vendedorComboBox != null) {
+            List<RegistroVendedor> vendedores = notaFiscalService.getVendedores();
+            vendedorComboBox.setModel(new DefaultComboBoxModel<>(new Vector<>(vendedores))); 
+        }
+    }
+    
+    // Atualiza o ComboBox de compradores na aba de produtos
+    private static void updateCompradorComboBox() {
+        if (compradorComboBox != null) {
+            List<RegistroComprador> compradores = notaFiscalService.getCompradores();
+            compradorComboBox.setModel(new DefaultComboBoxModel<>(new Vector<>(compradores))); 
+        }
+    }
+    
+    // Atualiza as áreas de texto na aba de listagem
+    private static void updateListagemGeral() {
+        if (vendedoresTextArea == null || compradoresTextArea == null || produtosTextArea == null) {
+            return; // Abas ainda não criadas
+        }
+        
+        // Limpa áreas
+        vendedoresTextArea.setText("");
+        compradoresTextArea.setText("");
+        produtosTextArea.setText("");
+        
+        // Popula Vendedores
+        List<RegistroVendedor> vendedores = notaFiscalService.getVendedores();
+        if (vendedores.isEmpty()) {
+            vendedoresTextArea.setText("Nenhum vendedor cadastrado.");
+        } else {
+            StringBuilder sbVendedores = new StringBuilder();
+            for (RegistroVendedor v : vendedores) {
+                sbVendedores.append(v.toString()).append("\n");
+            }
+            vendedoresTextArea.setText(sbVendedores.toString());
+        }
+        
+        // Popula Compradores
+        List<RegistroComprador> compradores = notaFiscalService.getCompradores();
+        if (compradores.isEmpty()) {
+            compradoresTextArea.setText("Nenhum comprador cadastrado.");
+        } else {
+            StringBuilder sbCompradores = new StringBuilder();
+            for (RegistroComprador c : compradores) {
+                sbCompradores.append(c.toString()).append("\n");
+            }
+            compradoresTextArea.setText(sbCompradores.toString());
+        }
+        
+        // Popula Produtos (com detalhes completos, incluindo comprador)
+        List<RegistroProduto> produtos = notaFiscalService.getProdutos();
+        if (produtos.isEmpty()) {
+            produtosTextArea.setText("Nenhum produto cadastrado.");
+        } else {
+            StringBuilder sbProdutos = new StringBuilder();
+            for (RegistroProduto p : produtos) {
+                sbProdutos.append(p.getDetalhesCompletos()).append("\n\n------------------------------------\n\n");
+            }
+            produtosTextArea.setText(sbProdutos.toString());
+            produtosTextArea.setCaretPosition(0); // Rola para o topo
+        }
+        
+        // Garante que as áreas de texto rolem para o topo
+        vendedoresTextArea.setCaretPosition(0);
+        compradoresTextArea.setCaretPosition(0);
+    }
+    
+    // Converte String para double usando Locale pt-BR
+    private static double parseDouble(String value) throws ParseException {
+        // Remove pontos de milhar e substitui vírgula decimal por ponto
+        String cleanValue = value.replace(".", "").replace(",", ".");
+        try {
+            return Double.parseDouble(cleanValue);
+        } catch (NumberFormatException e) {
+            throw new ParseException("Formato numérico inválido: " + value, 0);
+        }
+    }
 }
+
+
+//======================================================================
+// CLASSES DO BACK-END (Refatoradas e Atualizadas)
+//======================================================================
+
+/**
+ * Classe de serviço para gerenciar a lógica de negócio do sistema de nota fiscal.
+ */
+class NotaFiscalService {
+
+    // Listas para armazenar os registros
+    private final List<RegistroVendedor> vendedores = new ArrayList<>();
+    private final List<RegistroComprador> compradores = new ArrayList<>();
+    private final List<RegistroProduto> produtos = new ArrayList<>();
+    private final Set<String> documentosRegistrados = new HashSet<>();
+
+    // Mapa de alíquotas de ICMS por estado
+    private static final Map<String, Double> ALIQUOTAS_ICMS = new HashMap<>();
+    static {
+        ALIQUOTAS_ICMS.put("AC", 19.0); ALIQUOTAS_ICMS.put("AP", 18.0); ALIQUOTAS_ICMS.put("AM", 18.0);
+        ALIQUOTAS_ICMS.put("PA", 19.0); ALIQUOTAS_ICMS.put("RO", 19.5); ALIQUOTAS_ICMS.put("RR", 20.0);
+        ALIQUOTAS_ICMS.put("TO", 18.0); ALIQUOTAS_ICMS.put("AL", 18.0); ALIQUOTAS_ICMS.put("BA", 19.0);
+        ALIQUOTAS_ICMS.put("CE", 18.0); ALIQUOTAS_ICMS.put("MA", 23.0); ALIQUOTAS_ICMS.put("PB", 18.0);
+        ALIQUOTAS_ICMS.put("PE", 18.0); ALIQUOTAS_ICMS.put("PI", 22.5); ALIQUOTAS_ICMS.put("RN", 20.0);
+        ALIQUOTAS_ICMS.put("SE", 20.0); ALIQUOTAS_ICMS.put("DF", 18.0); ALIQUOTAS_ICMS.put("GO", 17.0);
+        ALIQUOTAS_ICMS.put("MT", 17.0); ALIQUOTAS_ICMS.put("MS", 17.0); ALIQUOTAS_ICMS.put("ES", 17.0);
+        ALIQUOTAS_ICMS.put("MG", 18.0); ALIQUOTAS_ICMS.put("RJ", 20.0); ALIQUOTAS_ICMS.put("SP", 18.0);
+        ALIQUOTAS_ICMS.put("PR", 19.0); ALIQUOTAS_ICMS.put("RS", 17.0); ALIQUOTAS_ICMS.put("SC", 17.0);
+    }
+
+    // Alíquotas de impostos federais
+    private static final double ALIQUOTA_IPI = 10.0;
+    private static final double ALIQUOTA_PIS = 0.65;
+    private static final double ALIQUOTA_COFINS = 3.0;
+    private static final double ALIQUOTA_IRPJ = 15.0;
+    private static final double ALIQUOTA_CSLL = 9.0;
+    private static final double ALIQUOTA_IMPORTACAO = 20.0;
+    private static final double ALIQUOTA_ITBI = 3.0;
+
+    // --- Métodos de Validação --- 
+
+    public String validarDocumento(String documento) {
+        Pattern padraoCPF = Pattern.compile("^\\d{3}\\.\\d{3}\\.\\d{3}-\\d{2}$");
+        Pattern padraoCNPJ = Pattern.compile("^\\d{2}\\.\\d{3}\\.\\d{3}/\\d{4}-\\d{2}$");
+
+        if (documento == null || documento.trim().isEmpty()) {
+             return "Erro: Documento (CPF/CNPJ) é obrigatório!";
+        }
+        documento = documento.trim(); // Usa a versão sem espaços extras
+
+        if (documentosRegistrados.contains(documento)) {
+            return "Erro: Este documento já foi inserido!";
+        }
+
+        if (!padraoCPF.matcher(documento).matches() && !padraoCNPJ.matcher(documento).matches()) {
+            return "Erro: Formato inválido!\nCPF: XXX.XXX.XXX-XX\nCNPJ: XX.XXX.XXX/XXXX-XX";
+        }
+        return null; // Válido
+    }
+    
+    public String validarNCM(String ncm) {
+        Pattern padrao = Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}$");
+         if (ncm == null || ncm.trim().isEmpty()) {
+             return "Erro: NCM é obrigatório!";
+        }
+        if (!padrao.matcher(ncm.trim()).matches()) {
+            return "Erro: NCM inválido! Formato: XXXX.XX.XX";
+        }
+        return null;
+    }
+
+    public String validarCFOP(String cfop) {
+        Pattern padrao = Pattern.compile("^\\d\\.\\d{3}$");
+         if (cfop == null || cfop.trim().isEmpty()) {
+             return "Erro: CFOP é obrigatório!";
+        }
+        if (!padrao.matcher(cfop.trim()).matches()) {
+            return "Erro: CFOP inválido! Formato: X.XXX";
+        }
+        return null;
+    }
+
+    public String validarValorPositivo(double valor, String nomeCampo) {
+        if (valor <= 0) {
+            return "Erro: " + nomeCampo + " deve ser maior que zero!";
+        }
+        return null;
+    }
+    
+    public String validarCampoTextoNaoVazio(String texto, String nomeCampo) {
+        if (texto == null || texto.trim().isEmpty()) {
+            return "Erro: " + nomeCampo + " é obrigatório!";
+        }
+        return null;
+    }
+
+    // --- Métodos de Registro --- 
+
+    public String registrarVendedor(String nome, String codigo) {
+        String erroNome = validarCampoTextoNaoVazio(nome, "Nome do Vendedor");
+        if (erroNome != null) return erroNome;
+        
+        String erroDoc = validarDocumento(codigo);
+        if (erroDoc != null) return erroDoc;
+
+        RegistroVendedor vendedor = new RegistroVendedor(nome.trim(), codigo.trim());
+        vendedores.add(vendedor);
+        documentosRegistrados.add(codigo.trim());
+        return null; // Sucesso
+    }
+
+    public String registrarComprador(String nome, String codigo) {
+        String erroNome = validarCampoTextoNaoVazio(nome, "Nome do Comprador");
+        if (erroNome != null) return erroNome;
+        
+        String erroDoc = validarDocumento(codigo);
+        if (erroDoc != null) return erroDoc;
+
+        RegistroComprador comprador = new RegistroComprador(nome.trim(), codigo.trim());
+        compradores.add(comprador);
+        documentosRegistrados.add(codigo.trim());
+        return null; // Sucesso
+    }
+
+    /**
+     * Registra um novo produto após validação, associando vendedor e comprador.
+     * @param nome Nome do produto.
+     * @param preco Preço unitário.
+     * @param descricao Descrição completa.
+     * @param ncm Código NCM.
+     * @param quantidade Quantidade.
+     * @param unidade Peso/Unidade.
+     * @param cfop Código CFOP.
+     * @param infoComplementares Informações complementares.
+     * @param impostosSelecionados Nomes dos impostos selecionados.
+     * @param uf Estado para cálculo do ICMS (se aplicável).
+     * @param vendedor Vendedor selecionado.
+     * @param comprador Comprador selecionado.
+     * @return Mensagem de erro ou null em caso de sucesso.
+     */
+    public String registrarProduto(String nome, double preco, String descricao, String ncm, 
+                                   double quantidade, String unidade, String cfop, 
+                                   String infoComplementares, Set<String> impostosSelecionados, 
+                                   String uf, RegistroVendedor vendedor, RegistroComprador comprador) {
+
+        String erro = validarCampoTextoNaoVazio(nome, "Nome do Produto");
+        if (erro != null) return erro;
+        erro = validarValorPositivo(preco, "Preço");
+        if (erro != null) return erro;
+        erro = validarNCM(ncm);
+        if (erro != null) return erro;
+        erro = validarValorPositivo(quantidade, "Quantidade");
+        if (erro != null) return erro;
+        erro = validarCampoTextoNaoVazio(unidade, "Peso/Unidade");
+        if (erro != null) return erro;
+        erro = validarCFOP(cfop);
+        if (erro != null) return erro;
+
+        // Validação de vendedor e comprador (já selecionados pela GUI)
+        if (vendedor == null) {
+            return "Erro: Vendedor não pode ser nulo!";
+        }
+        if (comprador == null) {
+            return "Erro: Comprador não pode ser nulo!";
+        }
+
+        Map<String, Double> impostosCalculados = calcularImpostos(impostosSelecionados, uf);
+        if (impostosCalculados == null) {
+             return "Erro: UF inválida para cálculo do ICMS! Verifique a sigla do estado.";
+        }
+
+        double valorSemImpostos = preco * quantidade;
+        double valorImpostos = calcularValorTotalImpostos(valorSemImpostos, impostosCalculados);
+        double valorTotal = valorSemImpostos + valorImpostos;
+
+        RegistroProduto produto = new RegistroProduto(
+            nome.trim(), preco, vendedor, comprador, // Passa o comprador
+            descricao.trim(), ncm.trim(), 
+            quantidade, unidade.trim(), cfop.trim(), valorSemImpostos, valorImpostos, valorTotal, 
+            infoComplementares.trim(), impostosCalculados
+        );
+        produtos.add(produto);
+        return null; // Sucesso
+    }
+
+    // --- Métodos de Cálculo --- 
+
+    private Map<String, Double> calcularImpostos(Set<String> impostosSelecionados, String uf) {
+        Map<String, Double> impostos = new HashMap<>();
+        if (impostosSelecionados == null) return impostos;
+
+        if (impostosSelecionados.contains("IPI")) impostos.put("IPI", ALIQUOTA_IPI);
+        if (impostosSelecionados.contains("PIS")) impostos.put("PIS", ALIQUOTA_PIS);
+        if (impostosSelecionados.contains("COFINS")) impostos.put("COFINS", ALIQUOTA_COFINS);
+        if (impostosSelecionados.contains("IRPJ")) impostos.put("IRPJ", ALIQUOTA_IRPJ);
+        if (impostosSelecionados.contains("CSLL")) impostos.put("CSLL", ALIQUOTA_CSLL);
+        if (impostosSelecionados.contains("II (Import.)")) impostos.put("II", ALIQUOTA_IMPORTACAO); // Nome no checkbox
+        if (impostosSelecionados.contains("ITBI")) impostos.put("ITBI", ALIQUOTA_ITBI);
+
+        if (impostosSelecionados.contains("ICMS")) {
+            if (uf == null || uf.trim().isEmpty() || !ALIQUOTAS_ICMS.containsKey(uf.trim().toUpperCase())) {
+                return null; // Indica erro na UF para ICMS
+            }
+            impostos.put("ICMS", ALIQUOTAS_ICMS.get(uf.trim().toUpperCase()));
+        }
+        return impostos;
+    }
+
+    private double calcularValorTotalImpostos(double valorBase, Map<String, Double> impostos) {
+        double valorTotalImpostos = 0.0;
+        if (impostos != null) {
+            for (double aliquota : impostos.values()) {
+                valorTotalImpostos += valorBase * (aliquota / 100.0);
+            }
+        }
+        return valorTotalImpostos;
+    }
+
+    // --- Métodos de Consulta --- 
+
+    public List<RegistroVendedor> getVendedores() {
+        return new ArrayList<>(vendedores);
+    }
+
+    public List<RegistroComprador> getCompradores() {
+        return new ArrayList<>(compradores);
+    }
+
+    public List<RegistroProduto> getProdutos() {
+        return new ArrayList<>(produtos);
+    }
+
+    // Métodos de busca por nome (mantidos, mas não usados na GUI atual)
+    public List<RegistroVendedor> buscarVendedorPorNome(String termo) {
+        if (termo == null || termo.trim().isEmpty()) return getVendedores();
+        String termoLower = termo.trim().toLowerCase();
+        return vendedores.stream()
+            .filter(v -> v.getNomeVendedor().toLowerCase().contains(termoLower))
+            .collect(Collectors.toList());
+    }
+
+    public List<RegistroComprador> buscarCompradorPorNome(String termo) {
+        if (termo == null || termo.trim().isEmpty()) return getCompradores();
+        String termoLower = termo.trim().toLowerCase();
+        return compradores.stream()
+            .filter(c -> c.getNomeComprador().toLowerCase().contains(termoLower))
+            .collect(Collectors.toList());
+    }
+
+    public List<RegistroProduto> buscarProdutoPorNome(String termo) {
+        if (termo == null || termo.trim().isEmpty()) return getProdutos();
+        String termoLower = termo.trim().toLowerCase();
+        return produtos.stream()
+            .filter(p -> p.getNomeProduto().toLowerCase().contains(termoLower))
+            .collect(Collectors.toList());
+    }
+}
+
+// --- Classes de Registro --- 
+
+class RegistroVendedor {
+    private String nomeVendedor;
+    private String codigo; // CPF ou CNPJ
+
+    public RegistroVendedor(String nomeVendedor, String codigo) {
+        this.nomeVendedor = nomeVendedor;
+        this.codigo = codigo;
+    }
+    public String getNomeVendedor() { return nomeVendedor; }
+    public String getCC() { return codigo; }
+    @Override
+    public String toString() { return nomeVendedor + " (" + codigo + ")"; }
+}
+
+class RegistroComprador {
+    private String nomeComprador;
+    private String codigo; // CPF ou CNPJ
+
+    public RegistroComprador(String nomeComprador, String codigo) {
+        this.nomeComprador = nomeComprador;
+        this.codigo = codigo;
+    }
+    public String getNomeComprador() { return nomeComprador; }
+    public String getCC() { return codigo; }
+    @Override
+    public String toString() { return nomeComprador + " (" + codigo + ")"; }
+}
+
+class RegistroProduto {
+    private String nomeProduto;
+    private double preco;
+    private RegistroVendedor vendedor;
+    private RegistroComprador comprador; // Adicionado comprador
+    private String descricaoCompleta;
+    private String codigoNCM;
+    private double quantidade;
+    private String unidade; // Peso
+    private String codigoCFOP;
+    private double valorSemImpostos;
+    private double valorImpostos;
+    private double valorTotal;
+    private String informacoesComplementares;
+    private Map<String, Double> impostos;
+
+    // Construtor atualizado para incluir comprador
+    public RegistroProduto(String nomeProduto, double preco, RegistroVendedor vendedor, RegistroComprador comprador, 
+                           String descricaoCompleta, String codigoNCM, double quantidade, String unidade, 
+                           String codigoCFOP, double valorSemImpostos, double valorImpostos, double valorTotal, 
+                           String informacoesComplementares, Map<String, Double> impostos) {
+        this.nomeProduto = nomeProduto;
+        this.preco = preco;
+        this.vendedor = vendedor;
+        this.comprador = comprador; // Armazena comprador
+        this.descricaoCompleta = descricaoCompleta;
+        this.codigoNCM = codigoNCM;
+        this.quantidade = quantidade;
+        this.unidade = unidade;
+        this.codigoCFOP = codigoCFOP;
+        this.valorSemImpostos = valorSemImpostos;
+        this.valorImpostos = valorImpostos;
+        this.valorTotal = valorTotal;
+        this.informacoesComplementares = informacoesComplementares;
+        this.impostos = impostos != null ? new HashMap<>(impostos) : new HashMap<>();
+    }
+
+    // Getters...
+    public String getNomeProduto() { return nomeProduto; }
+    public double getPreco() { return preco; }
+    public RegistroVendedor getVendedor() { return vendedor; }
+    public RegistroComprador getComprador() { return comprador; } // Getter para comprador
+    public String getDescricaoCompleta() { return descricaoCompleta; }
+    public String getCodigoNCM() { return codigoNCM; }
+    public double getQuantidade() { return quantidade; }
+    public String getUnidade() { return unidade; }
+    public String getCodigoCFOP() { return codigoCFOP; }
+    public double getValorSemImpostos() { return valorSemImpostos; }
+    public double getValorImpostos() { return valorImpostos; }
+    public double getValorTotal() { return valorTotal; }
+    public String getInformacoesComplementares() { return informacoesComplementares; }
+    public Map<String, Double> getImpostos() { return new HashMap<>(impostos); }
+
+    @Override
+    public String toString() {
+        return String.format("%s - R$ %.2f (Total: R$ %.2f) - Vendedor: %s", 
+                             nomeProduto, preco, valorTotal, vendedor.getNomeVendedor());
+    }
+    
+    // Atualizado para incluir comprador
+    public String getDetalhesCompletos() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("=== DETALHES DO PRODUTO ===\n");
+        sb.append("Nome: ").append(nomeProduto).append("\n");
+        sb.append("Descrição: ").append(descricaoCompleta).append("\n");
+        sb.append(String.format("Preço unitário: R$ %.10f\n", preco));
+        sb.append(String.format("Quantidade: %.4f %s\n", quantidade, unidade));
+        sb.append(String.format("Valor sem impostos: R$ %.10f\n", valorSemImpostos));
+        sb.append("Código NCM: ").append(codigoNCM).append("\n");
+        sb.append("Código CFOP: ").append(codigoCFOP).append("\n");
+        sb.append("Vendedor: ").append(vendedor.getNomeVendedor()).append(" (").append(vendedor.getCC()).append(")\n");
+        // Adiciona Comprador
+        if (comprador != null) {
+             sb.append("Comprador: ").append(comprador.getNomeComprador()).append(" (").append(comprador.getCC()).append(")\n");
+        } else {
+             sb.append("Comprador: Não associado\n");
+        }
+        
+        sb.append("\nImpostos aplicáveis:\n");
+        if (impostos.isEmpty()) {
+            sb.append("  Nenhum imposto aplicável\n");
+        } else {
+            for (Map.Entry<String, Double> imposto : impostos.entrySet()) {
+                double valorImposto = valorSemImpostos * (imposto.getValue() / 100.0);
+                sb.append(String.format("  - %s: %.4f%% (R$ %.10f)\n", 
+                                        imposto.getKey(), imposto.getValue(), valorImposto));
+            }
+            sb.append(String.format("Total de impostos: R$ %.10f\n", valorImpostos));
+        }
+        
+        sb.append(String.format("\nValor total com impostos: R$ %.10f\n", valorTotal));
+        sb.append("Informações complementares: ").append(informacoesComplementares);
+        return sb.toString();
+    }
+}
+
