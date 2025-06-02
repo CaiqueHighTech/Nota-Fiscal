@@ -293,6 +293,24 @@ public class SistemaNotaFiscal {
             return;
         }
         RegistroVendedor vendedor = vendedores.get(indiceVendedor);
+
+        System.out.println("\nCompradores disponíveis:");
+        for (int i = 0; i < compradores.size(); i++) {
+            System.out.println((i + 1) + ". " + compradores.get(i).getNomeComprador() + " - " + compradores.get(i).getCC());
+        }
+        System.out.print("Selecione o número do comprador: ");
+        int indiceComprador;
+        try {
+            indiceComprador = Integer.parseInt(scanner.nextLine().trim()) - 1;
+            if (indiceComprador < 0 || indiceComprador >= compradores.size()) {
+                System.out.println("Erro: Índice de comprador inválido!");
+                return;
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Erro: Entrada inválida para índice de comprador!");
+            return;
+        }
+        RegistroComprador comprador = compradores.get(indiceComprador);
         
         // Criação do produto com todos os dados coletados
         RegistroProduto produto = new RegistroProduto(
