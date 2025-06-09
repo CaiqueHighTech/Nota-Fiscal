@@ -4,13 +4,13 @@
  * 
  * Instrutor(a) : Prof. Sheila Tirony
  * Integrantes  : Andrew Soares Menezes dos Santos; Bernardo de Mello Cyrne Garmatz; Caique da Conceição Medeiros;
- *                Inácio Araújo Dias de Freitas; Rodrigo Costa Brasil.
+ *                Caique Dantas de frança; Inácio Araújo Dias de Freitas; Rodrigo Costa Brasil.
  * 
  * - Este sistema permite o registro de vendedores, compradores e produtos.
  * - Possui funcionalidades de consulta e listagem detalhada.
  * - Inclui validações fiscais e cálculo de impostos.
  * 
- * (20/05/2025)-(IDE jdoodle.com)-(github:https://github.com/CaiqueHighTech/Nota-Fiscal/blob/main/Para%20Testes)
+ * (09/26/2025)-(IDE jdoodle.com)-(github:https://github.com/CaiqueHighTech/Nota-Fiscal/blob/main/Para%20Testes)
 *****************************************************************************************************************/
 
 // Declaração de Bibliotecas
@@ -626,10 +626,6 @@ public class SistemaNotaFiscal {
     }
 }
 
-
-
-//*************************************************************************************************************************
-
 // Classe que representa um vendedor no sistema de vendas online
 class RegistroVendedor {
     private String nomeVendedor; // Atributo privado para o nome do vendedor (ex.: "Loja ABC")
@@ -703,8 +699,6 @@ class RegistroComprador {
         return "Comprador: " + nomeComprador + " - CPF: " + cc;
     }
 }
-
-//*************************************************************************************************************************
 
 // Classe que representa um produto no sistema de vendas online (armazenamento de infoinformações)
 class RegistroProduto {
