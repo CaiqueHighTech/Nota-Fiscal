@@ -990,7 +990,7 @@ class RegistroProduto {
         sb.append("Nome: ").append(nomeProduto).append("\n");
         sb.append("Descrição: ").append(descricaoCompleta).append("\n");
         sb.append(String.format("Preço unitário: R$ %.10f\n", preco));
-        sb.append(String.format("Quantidade: %.4f %s\n", quantidade, unidade));
+        sb.append(String.format("Quantidade: %.4f\nPeso: %s\n", quantidade, unidade));
         sb.append(String.format("Valor sem impostos: R$ %.10f\n", valorSemImpostos));
         sb.append("Código NCM: ").append(codigoNCM).append("\n");
         sb.append("Código CFOP: ").append(codigoCFOP).append("\n");
