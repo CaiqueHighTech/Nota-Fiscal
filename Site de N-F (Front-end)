@@ -1,4 +1,4 @@
-// Imports for Swing and AWT
+// Importações para Swing e AWT
 import javax.swing.*;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
@@ -11,7 +11,7 @@ import java.text.NumberFormat;
 import java.text.ParseException;
 import java.util.Locale;
 
-// Imports for Backend Logic
+// Importações para a lógica do Back-end
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,15 +24,13 @@ import java.util.stream.Collectors;
 
 /**
  * Classe principal que integra o Front-End Swing com o Back-End NotaFiscalService.
- * Permite o cadastro de vendedores, compradores, produtos (associando comprador)
- * e a listagem geral.
- * 
+ * Permite o cadastro de vendedores, compradores, produtos (associando comprador) e a listagem geral.
  * @author Manus
  * @version 4.0 (GUI com Associação Comprador-Produto)
  */
 public class EstiloJava {
 
-    // Instância do serviço de back-end
+    // Instância do serviço de Back-end
     private static NotaFiscalService notaFiscalService = new NotaFiscalService();
     private static JComboBox<RegistroVendedor> vendedorComboBox; // ComboBox para selecionar vendedor
     private static JComboBox<RegistroComprador> compradorComboBox; // ComboBox para selecionar comprador
